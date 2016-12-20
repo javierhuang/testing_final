@@ -41,7 +41,10 @@ test()
         printf("# Total detected faults: %d\n", total_detect_num);
         return;
     }
-
+    if(tdfatpg_only)
+    {
+        tdf_atpg();
+    }
     /* ATPG mode */
     /* Figure 5 in the PODEM paper */
     while(fault_under_test) {
