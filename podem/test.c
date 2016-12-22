@@ -44,6 +44,7 @@ test()
     if(tdfatpg_only)
     {
         tdf_atpg();
+        return;
     }
     /* ATPG mode */
     /* Figure 5 in the PODEM paper */

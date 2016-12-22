@@ -148,7 +148,6 @@ int *num_of_current_detect;
 	      first_faulty_wire = sort_wlist[f->to_swlist];
 	      first_faulty_wire->flag |= FAULTY;
 	    }
-
 	    /* add the fault to the simulated fault list and inject the fault */
 	    simulated_fault_list[num_of_fault] = f;
 	    inject_fault_value(sort_wlist[f->to_swlist], num_of_fault,
@@ -440,7 +439,7 @@ int *fault_type;
             }
 	    /* AND gate input stuck-at one fault is propagated to 
 	       AND gate output stuck-at one fault */
-            *fault_type = STUCK1;  
+            *fault_type = f->fault_type;
             break;
 
         case NAND:
@@ -451,7 +450,7 @@ int *fault_type;
                     }
                 }
             }
-            *fault_type = STUCK0;
+            *fault_type = f->fault_type ^ 1;
             break;
         case OR:
             for (i = 0; i < f->node->nin; i++) {
@@ -461,7 +460,7 @@ int *fault_type;
                     }
                 }
             }
-            *fault_type = STUCK0;
+            *fault_type = f->fault_type;
             break;
         case  NOR:
             for (i = 0; i < f->node->nin; i++) {
@@ -471,7 +470,7 @@ int *fault_type;
                     }
                 }
             }
-            *fault_type = STUCK1;
+            *fault_type = f->fault_type ^ 1;
             break;
         case XOR:
             for (i = 0; i < f->node->nin; i++) {

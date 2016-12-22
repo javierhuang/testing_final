@@ -20,7 +20,7 @@ char *argv[];
 
     vetFile[0]='0';
     fsim_only=FALSE;
-	tdfsim_only=FALSE;
+    tdfsim_only=FALSE;
     tdfatpg_only = FALSE;
     compress = FALSE;
     det_num = 1;
@@ -29,7 +29,7 @@ char *argv[];
     strcpy(inpFile, "xxxx");
     i = 1;
 /* parse the input switches & arguments */
-    while(i< argc) {
+    while(i < argc) {
         if (strcmp(argv[i],"-anum") == 0) {
             total_attempt_num = atoi(argv[i+1]);
             i+=2;
@@ -43,35 +43,32 @@ char *argv[];
             fsim_only=TRUE;
             i+=2;
         }
-		else if (strcmp(argv[i],"-tdfsim") == 0) {
-			strcpy(vetFile, argv[i+1]);
+	else if (strcmp(argv[i],"-tdfsim") == 0) {
+	    strcpy(vetFile, argv[i+1]);
             tdfsim_only=TRUE;
             i+=2;
-		}
-        else if (strcmp(argv[i],"-tdfatpg") == 0) {
+        }
+        else if (strcmp(argv[i], "-tdfatpg") == 0) {
             tdfatpg_only=TRUE;
             i++;
         }
-        else if (argv[i][0] == '-') {
-            if(strcmp(argv[i],"-compression") == 0)
-            {
-                compress = TRUE;
-            }
-            else if(strcmp(argv[i],"-ndet") == 0)
-            {
-                string det_num_temp = argv[i+1];
-                det_num = atoi(det_num_temp);
-            }
-            else{
-                j = 1;
-                while (argv[i][j] != '\0') {
-                    if (argv[i][j] == 'd') {
-                        j++ ;
-                    }
-                    else {
-                        fprintf(stderr, "atpg: unknown option\n");
-                        usage();
-                    }
+        else if (strcmp(argv[i], "-compression") == 0) {
+            compress = TRUE;
+            i++;
+        }
+        else if (strcmp(argv[i], "-ndet") == 0) {
+            det_num = atoi(argv[i+1]);
+            i += 2;
+        }
+        else if (argv[i][0] == '-'){
+            j = 1;
+            while (argv[i][j] != '\0') {
+                if (argv[i][j] == 'd') {
+                    j++ ;
+                }
+                else {
+                    fprintf(stderr, "atpg: unknown option\n");
+                    usage();
                 }
             }
             i++ ;
@@ -104,9 +101,9 @@ char *argv[];
     generate_fault_list(); //init_flist.c
     //timer(stdout,"for generating fault list",filename);
     test(); //test.c
-	if(!tdfsim_only){
-		compute_fault_coverage(); //init_flist.c
-	}
+    if(!tdfsim_only){
+      compute_fault_coverage(); //init_flist.c
+    }
     
     //timer(stdout,"for test pattern generation",filename);
     exit(0);
