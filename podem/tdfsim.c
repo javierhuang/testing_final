@@ -132,6 +132,7 @@ generate_tdf_fault_list()
     f->io = GO;
     f->fault_type = STR;
     f->to_swlist = i;
+    f->detect_num = detect_num;
     switch (n->type) {   
       case   NOT:
       case   BUF:
@@ -159,6 +160,7 @@ generate_tdf_fault_list()
     f->io = GO;
     f->fault_type = STF;
     f->to_swlist = i;
+    f->detect_num = detect_num;
     switch (n->type) {
       case   NOT:
       case   BUF:
@@ -198,6 +200,7 @@ generate_tdf_fault_list()
             f->io = GI;
             f->fault_type = STR;
             f->to_swlist = i;
+            f->detect_num = detect_num;
             f->eqv_fault_num = 1;
             for (k = 0; k < n->nin; k++) {  
               if (n->iwire[k] == w) f->index = k;
@@ -213,6 +216,7 @@ generate_tdf_fault_list()
             f->io = GI;
             f->fault_type = STF;
             f->to_swlist = i;
+            f->detect_num = detect_num;
             f->eqv_fault_num = 1;
             for (k = 0; k < n->nin; k++) {
               if (n->iwire[k] == w) f->index = k;
@@ -230,6 +234,7 @@ generate_tdf_fault_list()
   /*walk through all fautls, assign fault_no one by one  */
   for (f = first_fault, fault_num = 0; f; f = f->pnext, fault_num++) {
     f->fault_no = fault_num;
+    assert(f->detect_num == detect_num);
   }
 
   //fprintf(stdout,"#number of equivalent faults = %d\n", fault_num);

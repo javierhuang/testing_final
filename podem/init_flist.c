@@ -38,6 +38,7 @@ generate_fault_list()
         f->io = GO;
         f->fault_type = STUCK0;
         f->to_swlist = i;
+        f->detect_num = detect_num;
 	/* for AND NOR NOT BUF, their GI fault is equivalent to GO SA0 fault */
         switch (n->type) {   
             case   AND:
@@ -66,6 +67,7 @@ generate_fault_list()
         f->io = GO;
         f->fault_type = STUCK1;
         f->to_swlist = i;
+        f->detect_num = detect_num;
 	/* for OR NAND NOT BUF, their GI fault is equivalent to GO SA1 fault */
         switch (n->type) {
             case    OR:
@@ -104,6 +106,7 @@ generate_fault_list()
                         f->io = GI;
                         f->fault_type = STUCK0;
                         f->to_swlist = i;
+                        f->detect_num = detect_num;
                         f->eqv_fault_num = 1;
 			/* f->index is the index number of gate input, 
 			   which GI fault is associated with*/
@@ -129,6 +132,7 @@ generate_fault_list()
                         f->io = GI;
                         f->fault_type = STUCK1;
                         f->to_swlist = i;
+                        f->detect_num = detect_num;
                         f->eqv_fault_num = 1;
                         for (k = 0; k < n->nin; k++) {
                             if (n->iwire[k] == w) f->index = k;

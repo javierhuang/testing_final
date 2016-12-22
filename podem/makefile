@@ -33,4 +33,6 @@ tdfatpg.o : atpg.h miscell.h tdfatpg.c
 	gcc $(CFLAGS) -c tdfatpg.c
 clean:
 	rm $(TARGET) *.o
+tags:
+	ctags *.c *.h
 

@@ -36,8 +36,9 @@ struct FAULT {
     short eqv_fault_num;  /* number of equivalent faults */
     fptr pnext;           /* pointer to the next element in the list */
     fptr pnext_undetect;  /* pointer to next undetected fault */
-	short to_swlist;      /* index to the sort_wlist[] */ 
-	int fault_no;         /* fault index */
+    short to_swlist;      /* index to the sort_wlist[] */ 
+    int fault_no;         /* fault index */
+    int detect_num;       /* number of detection */
 };
 
 fptr first_fault;         /* pointer to the first element of the fault list */

@@ -7,6 +7,7 @@
 /**********************************************************************/
 
 #include"atpg.h"
+#include <assert.h>
 
 #ifdef MAIN
 
@@ -24,7 +25,7 @@ int fsim_only;             /* flag to indicate fault simulation only */
 int tdfsim_only;           /* flag to indicate transition delay fault simulation only */
 int tdfatpg_only;          /* flag to indicate transition delay fault atpg only */
 int compress;              /* flag to compress */
-int det_num;               /* detect num */
+int detect_num;            /* detect num */
 int sim_vectors;           /* number of simulation vectors */
 char **vectors;            /* vector set */
 
@@ -44,7 +45,7 @@ extern int fsim_only;             /* flag to indicate fault simulation only */
 extern int tdfsim_only;           /* flag to indicate transition delay fault simulation only */
 extern int tdfatpg_only;          /* flag to indicate transition delay fault atpg only */
 extern int compress;              /* flag to compress */
-extern int det_num;               /* detect num */
+extern int detect_num;            /* detect num */
 extern int sim_vectors;           /* number of simulation vectors */
 extern char **vectors;            /* vector set */
 

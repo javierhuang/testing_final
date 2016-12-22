@@ -23,7 +23,7 @@ char *argv[];
     tdfsim_only=FALSE;
     tdfatpg_only = FALSE;
     compress = FALSE;
-    det_num = 1;
+    detect_num = 1;
     timer(stdout,"START", filename);
 
     strcpy(inpFile, "xxxx");
@@ -57,7 +57,7 @@ char *argv[];
             i++;
         }
         else if (strcmp(argv[i], "-ndet") == 0) {
-            det_num = atoi(argv[i+1]);
+            detect_num = atoi(argv[i+1]);
             i += 2;
         }
         else if (argv[i][0] == '-'){

@@ -4,7 +4,7 @@
 
 
 tdf_atpg() {
-    printf("compress = %d, det_num = %d\n", compress, det_num);
+    printf("compress = %d, detect_num = %d\n", compress, detect_num);
     fptr undetect_fault;
     fptr fault_under_test;
     fptr f, ftemp;
@@ -18,7 +18,7 @@ tdf_atpg() {
     int tdf_podem();
     fptr transition_sim_a_vector();
     /* generate TDF fault list */
-    generate_tdf_fault_list();
+    generate_tdf_fault_list(detect_num);
     fault_under_test = first_fault;
     undetect_fault = first_fault;
     /* TDF ATPG */
