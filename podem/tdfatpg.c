@@ -8,23 +8,28 @@
 #define CONFLICT 2
 
 extern int backtrack_limit;     // maximum number of backtracked allowed, defatult is 50
-extern int total_attempt_num;   // number of patterns per fault, default is 1
+extern int detect_num;          // number of patterns per fault, default is 1
 int no_of_backtracks;           // current number of backtracks
 int find_test;                  // TRUE when a test pattern is found
 int no_test;                    // TRUE when it is proven that no test exists for this fault 
 int unique_imply;
 
 tdf_atpg() {
-    printf("compress = %d, detect_num = %d\n", compress, detect_num);
+    printf("#compress = %d, detect_num = %d\n", compress, detect_num);
     fptr undetect_fault;
     fptr fault_under_test;
     fptr f, ftemp;
-    int current_detect_num, total_detect_num, i;
+    int i;
+    int total_detect_num = 0;
     int total_no_of_backtracks = 0;
     int current_backtracks;
     int no_of_aborted_faults = 0;
     int no_of_redundant_faults = 0;
     int no_of_calls = 0;
+    /* generated test vectors */
+    char *malloc();
+    char **vectors = malloc(detect_num * sizeof(char*));
+    int no_of_vectors;
     /* function declaration */
     int tdf_podem();
     fptr transition_sim_a_vector();
@@ -34,11 +39,12 @@ tdf_atpg() {
     undetect_fault = first_fault;
     /* TDF ATPG */
     while (fault_under_test) {
-        switch (tdf_podem(fault_under_test, &current_backtracks)) {
+        switch (tdf_podem(fault_under_test, &current_backtracks, vectors, &no_of_vectors)) {
             case TRUE:
-                undetect_fault = fault_sim_a_vector(undetect_fault, &current_detect_num);
-                total_detect_num += current_detect_num;
-                in_vector_no++;
+                display_patterns(vectors, no_of_vectors);
+                undetect_fault = fault_simulate_vectors(vectors, no_of_vectors, undetect_fault, &total_detect_num);
+                /* total_detect_num += current_detect_num; */
+                in_vector_no += no_of_vectors;
                 break;
 	    case FALSE:
                 fault_under_test->test_tried = TRUE;
@@ -62,10 +68,12 @@ tdf_atpg() {
     }
 }
 
-/* generates a single pattern for a single fault */
-int tdf_podem(fault, current_backtracks)
+/* generates patterns for a single fault */
+int tdf_podem(fault, current_backtracks, vectors, no_of_vectors)
 fptr fault;
 int *current_backtracks;
+char **vectors;
+int *no_of_vectors;
 {
     register int i,j;
     register nptr n;
@@ -77,7 +85,6 @@ int *current_backtracks;
     wptr tdf_fault_evaluate();
     long rand();
     int tdf_set_uniquely_implied_value();
-    int attempt_num = 0;  // counts the number of pattern generated so far for the given fault
     void display_fault();
 
     /* initialize all circuit wires to unknown */
@@ -85,6 +92,7 @@ int *current_backtracks;
         sort_wlist[i]->value = U;
     }
     no_of_backtracks = 0;
+    *no_of_vectors = 0;
     find_test = FALSE;
     no_test = FALSE;
     decision_tree = NIL(struct WIRE);
@@ -98,7 +106,11 @@ int *current_backtracks;
         case TRUE: // if a  PI is assigned 
 	  sim();  // Fig 7.3
 	  if (wfault = tdf_fault_evaluate(fault)) tdf_forward_imply(wfault);// propagate fault effect
-	  if (tdf_check_test()) find_test = TRUE; // if fault effect reaches PO, done. Fig 7.10
+          // if fault effect reaches PO, done. Fig 7.10
+	  if (tdf_check_test()) {
+            find_test = TRUE; 
+            tdf_fill_pattern(vectors, no_of_vectors);
+          }
 	  break;
         case CONFLICT:
 	  no_test = TRUE; // cannot achieve initial objective, no test
@@ -111,9 +123,9 @@ int *current_backtracks;
      * quit the loop when either one of the three conditions is met: 
      * 1. number of backtracks is equal to or larger than limit
      * 2. no_test
-     * 3. already find a test pattern AND no_of_patterns meets required total_attempt_num */
+     * 3. already find a test pattern AND no_of_patterns meets required detect_num */
     while ((no_of_backtracks < backtrack_limit) && !no_test &&
-        !(find_test && (attempt_num == total_attempt_num))) {
+        !(find_test && (*no_of_vectors == detect_num))) {
       
         /* check if test possible.   Fig. 7.1 */
         if (wpi = tdf_test_possible(fault)) {
@@ -155,17 +167,17 @@ again:  if (wpi) {
             if (tdf_check_test()) {
                 find_test = TRUE;
 		/* if multiple patterns per fault, print out every test cube */
-                if (total_attempt_num > 1) {
-                    if (attempt_num == 0) {
+                /* if (detect_num > 1) {
+                    if (*no_of_vectors == 0) {
                         display_fault(fault);
                     }
-                    display_io(); 
-                }
-                attempt_num++; // increase pattern count for this fault
+                    display_io();
+                } */
+                tdf_fill_pattern(vectors, no_of_vectors);
 
 		/* keep trying more PI assignments if we want multiple patterns per fault
 		 * this is not in the original PODEM paper*/
-                if (total_attempt_num > attempt_num) {
+                if (detect_num > *no_of_vectors) {
                     wpi = NIL(struct WIRE);
                     while (decision_tree && !wpi) {
 		      /* backtrack */
@@ -188,7 +200,7 @@ again:  if (wpi) {
                     }
                     if (!wpi) no_test = TRUE;
                     goto again;  // if we want multiple patterns per fault
-                } // if total_attempt_num > attempt_num
+                } // if detect_num > *no_of_vectors
             }  // if check_test()
         } // again
     } // while (three conditions)
@@ -201,27 +213,13 @@ again:  if (wpi) {
     }
     *current_backtracks = no_of_backtracks;
     tdf_unmark_propagate_tree(fault->node);
-    if (find_test) {
-      /* normally, we want one pattern per fault */
-        if (total_attempt_num == 1) {
-	  
-	  for (i = 0; i < ncktin; i++) {
-	    switch (cktin[i]->value) {
-	    case 0:
-	    case 1: break;
-	    case D: cktin[i]->value = 1; break;
-	    case B: cktin[i]->value = 0; break;
-	    case U: cktin[i]->value = rand()&01; break; // random fill U
-	    }
-	  }
-	  display_io();
-        }
-        else fprintf(stdout, "\n");  // do not random fill when multiple patterns per fault
-        return(TRUE);
-    }
-    else if (no_test) {
+    if (no_test) {
         /*fprintf(stdout,"redundant fault...\n");*/
         return(FALSE);
+    }
+    else if (find_test) {
+        assert(*no_of_vectors == detect_num);
+        return(TRUE);
     }
     else {
         /*fprintf(stdout,"test aborted due to backtrack limit...\n");*/
@@ -751,3 +749,40 @@ int logic_level;
         return(pi_is_reach);  
     }
 }/* end of backward_imply */
+
+/* generate multiple patterns by filling unknowns */
+tdf_fill_pattern(vectors, no_of_vectors)
+char **vectors;
+int *no_of_vectors;
+{
+  int i, j;
+  char *malloc();
+  for (i = 0; i < ncktin; i++) {
+    if (cktin[i]->value == U) {
+      if (*no_of_vectors < detect_num) {
+        cktin[i]->value = 0;
+        tdf_fill_pattern(vectors, no_of_vectors);
+      }
+      if (*no_of_vectors < detect_num) {
+        cktin[i]->value = 1;
+        tdf_fill_pattern(vectors, no_of_vectors);
+      }
+      cktin[i]->value = U;
+      break;
+    }
+  }
+  /* all inputs are not U -> generate a pattern */
+  if (i == ncktin) {
+    vectors[*no_of_vectors] = malloc(ncktin);
+    for (j = 0; j < ncktin; j++) {
+      switch (cktin[j]->value) {
+        case 0:
+        case B: vectors[*no_of_vectors][j] = 0; break;
+        case 1:
+        case D: vectors[*no_of_vectors][j] = 1; break;
+        default: printf("something is wrong in tdf_fill_pattern.\n");
+      }
+    }
+    *no_of_vectors += 1;
+  }
+}

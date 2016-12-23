@@ -158,7 +158,6 @@ fptr f;
 
     switch (f->node->type) {
         case INPUT:
-            fprintf(stdout,"primary input: %s\n",f->node->owire[0]->name);
             break;
         case OUTPUT:
             fprintf(stdout,"primary output: %s\n",f->node->iwire[0]->name);
@@ -196,3 +195,29 @@ fptr f;
     }
     fprintf(stdout,"\n");
 }/* end of display_fault */
+
+void
+display_pattern(pattern)
+char *pattern;
+{
+    int i;
+    fprintf(stdout,"T'");
+    for (i = 0; i < ncktin; i++) {
+        switch (pattern[i]) {
+            case 0: fprintf(stdout,"0"); break;
+            case 1: fprintf(stdout,"1"); break;
+            default: fprintf("stdout","wrong pattern\n");
+        }
+    }
+    fprintf(stdout,"'\n");
+}
+
+void
+display_patterns(patterns, no_of_patterns)
+char **patterns;
+int no_of_patterns;
+{
+    int i;
+    for (i = 0; i < no_of_patterns; i++)
+        display_pattern(patterns[i]);
+}
