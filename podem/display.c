@@ -206,7 +206,7 @@ char *pattern;
         switch (pattern[i]) {
             case 0: fprintf(stdout,"0"); break;
             case 1: fprintf(stdout,"1"); break;
-            default: fprintf("stdout","wrong pattern\n");
+            default: fprintf(stdout,"?");
         }
     }
     fprintf(stdout,"'\n");

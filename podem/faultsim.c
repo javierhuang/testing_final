@@ -270,9 +270,12 @@ int *num_of_current_detect;
     /* the following two loops are both for fault dropping  */  
     /* drop detected faults from the FRONT of the undetected fault list */
     while(flist) {
-      if (flist->detect == TRUE)
+      if (flist->detect == TRUE) {
         flist->detect_num -= 1;
+        flist->detect = FALSE;
+      }
       if (flist->detect_num == 0) {
+        flist->detect = TRUE;
 	(*num_of_current_detect) += flist->eqv_fault_num;
 	f = flist->pnext_undetect;
 	flist->pnext_undetect = NULL;
@@ -284,9 +287,12 @@ int *num_of_current_detect;
     /* drop detected faults from WITHIN the undetected fault list*/
     if (flist) {
       for (f = flist; f->pnext_undetect; f = ftemp) {
-	if (f->pnext_undetect->detect == TRUE) 
+	if (f->pnext_undetect->detect == TRUE) {
           f->pnext_undetect->detect_num -= 1;
+          f->pnext_undetect->detect = FALSE;
+        }
         if (f->pnext_undetect->detect_num == 0) {
+          f->pnext_undetect->detect = TRUE;
           (*num_of_current_detect) += f->pnext_undetect->eqv_fault_num;
           f->pnext_undetect = f->pnext_undetect->pnext_undetect;
           ftemp = f;
