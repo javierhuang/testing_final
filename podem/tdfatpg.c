@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "global.h"
 #include "miscell.h"
 
@@ -30,6 +31,25 @@ int n;
   return 0;
 }
 
+wptr
+get_next_wire(w)
+wptr w;
+{
+  int id = w->wlist_index;
+  if (id + 1 < ncktin)
+    return sort_wlist[id + 1];
+  return NULL;
+}
+
+wptr
+get_prev_wire(w)
+wptr w;
+{
+  int id = w->wlist_index;
+  if (id - 1 >= 0)
+    return sort_wlist[id - 1];
+  return NULL;
+}
 
 tdf_atpg() {
     printf("#compress = %d, detect_num = %d\n", compress, detect_num);
@@ -44,10 +64,9 @@ tdf_atpg() {
     int no_of_redundant_faults = 0;
     int no_of_calls = 0;
     /* generated test vectors */
-    char *malloc();
-    char **vectors = malloc(detect_num * sizeof(char*));
+    char **vectors = (char**)malloc(detect_num * sizeof(char*));
     int no_of_vectors;
-    all_vectors = malloc(1000 * sizeof(char*));
+    all_vectors = (char**)malloc(1000 * sizeof(char*));
     no_of_all_vectors = 0;
     /* function declaration */
     int tdf_podem();
@@ -106,7 +125,7 @@ int *no_of_vectors;
     int no_of_detects;
     wptr tdf_test_possible();
     wptr tdf_fault_evaluate();
-    long rand();
+    int rand();
     int tdf_set_uniquely_implied_value();
     void display_fault();
 
@@ -644,7 +663,7 @@ fptr fault;
             case NAND:
                  for (i = 0; i < fault->node->nin; i++) {
                      if (fault->node->iwire[i] != w) {
-                         switch (tdf_backward_imply(fault->node->iwire[i],1)) {
+                         switch (tdf_backward_imply2(fault->node->iwire[i],1)) {
                              case TRUE: pi_is_reach = TRUE; break;
                              case CONFLICT: return(CONFLICT); break;
                              case FALSE: break;
@@ -657,7 +676,7 @@ fptr fault;
             case NOR:
                  for (i = 0; i < fault->node->nin; i++) {
                      if (fault->node->iwire[i] != w) {
-                         switch (tdf_backward_imply(fault->node->iwire[i],0)) {
+                         switch (tdf_backward_imply2(fault->node->iwire[i],0)) {
                              case TRUE: pi_is_reach = TRUE; break;
                              case CONFLICT: return(CONFLICT); break;
                              case FALSE: break;
@@ -668,8 +687,13 @@ fptr fault;
         }
     } // else , gate input fault 
      
-    /* fautl excitation */
-    switch (tdf_backward_imply(w,(fault->fault_type ^ 1))) {
+    /* fault excitation */
+    switch (tdf_backward_imply(w,(fault->fault_type))) {
+        case TRUE: pi_is_reach = TRUE; break;
+        case CONFLICT: return(CONFLICT); break;
+        case FALSE: break;  
+    }
+    switch (tdf_backward_imply2(w,(fault->fault_type ^ 1))) {
         case TRUE: pi_is_reach = TRUE; break;
         case CONFLICT: return(CONFLICT); break;
         case FALSE: break;  
@@ -688,14 +712,19 @@ int logic_level;
 {
     register int pi_is_reach = FALSE;
     register int i;
+    wptr next_wire;
 
-    if (current_wire->flag2 & INPUT) { // if PI
-        if (current_wire->value2 != U &&
-            current_wire->value2 != logic_level) {
+    if (current_wire->flag & INPUT) { // if PI
+        if (current_wire->value != U &&
+            current_wire->value != logic_level) {
             return(CONFLICT); // conlict with previous assignment
         }
-        current_wire->value2 = logic_level; // assign PI to the objective value
-        current_wire->flag2 |= CHANGED;
+        current_wire->value = logic_level; // assign PI to the objective value
+        current_wire->flag |= CHANGED;
+        if (next_wire = get_next_wire(current_wire)) {
+          next_wire->value2 = logic_level;
+          next_wire->flag2 |= CHANGED;
+        }
 	// CHANGED means the logic value on this wire has recently been changed
         return(TRUE);
     }
@@ -775,6 +804,104 @@ int logic_level;
     }
 }/* end of backward_imply */
 
+tdf_backward_imply2(current_wire,logic_level)
+wptr current_wire;
+int logic_level;
+{
+    register int pi_is_reach = FALSE;
+    register int i;
+    wptr prev_wire;
+
+    if (current_wire->flag2 & INPUT) { // if PI
+        if (current_wire->value2 != U &&
+            current_wire->value2 != logic_level) {
+            return(CONFLICT); // conlict with previous assignment
+        }
+        current_wire->value2 = logic_level; // assign PI to the objective value
+        current_wire->flag2 |= CHANGED;
+        if (prev_wire = get_prev_wire(current_wire)) {
+          prev_wire->value = logic_level;
+          prev_wire->flag |= CHANGED;
+        }
+	// CHANGED means the logic value on this wire has recently been changed
+        return(TRUE);
+    }
+    else { // if not PI
+        switch (current_wire->inode[0]->type) {
+	  /* assign NOT input opposite to its objective ouput */
+          /* go backward iteratively.  depth first search */
+            case NOT:
+                switch (tdf_backward_imply2(current_wire->inode[0]->iwire[0],
+                    (logic_level ^ 1))) {
+                    case TRUE: pi_is_reach = TRUE; break;
+                    case CONFLICT: return(CONFLICT); break;
+                    case FALSE: break;
+                }
+                break;
+
+		/* if objective is NAND output=zero, then NAND inputs are all ones  
+		 * keep doing this back implication iteratively  */
+            case NAND:
+                if (!logic_level) {
+                    for (i = 0; i < current_wire->inode[0]->nin; i++) {
+                        switch (tdf_backward_imply2(current_wire->inode[0]->iwire[i],1)) {
+                            case TRUE: pi_is_reach = TRUE; break;
+                            case CONFLICT: return(CONFLICT); break;
+                            case FALSE: break;
+                        }
+                    }
+                }
+                break;
+
+            case AND:
+                if (logic_level) {
+                    for (i = 0; i < current_wire->inode[0]->nin; i++) {
+                        switch (tdf_backward_imply2(current_wire->inode[0]->iwire[i],1)) {
+                            case TRUE: pi_is_reach = TRUE; break;
+                            case CONFLICT: return(CONFLICT); break;
+                            case FALSE: break;
+                        }
+                    }
+                }
+                break;
+
+            case OR:
+                if (!logic_level) {
+                    for (i = 0; i < current_wire->inode[0]->nin; i++) {
+                        switch (tdf_backward_imply2(current_wire->inode[0]->iwire[i],0)) {
+                            case TRUE: pi_is_reach = TRUE; break;
+                            case CONFLICT: return(CONFLICT); break;
+                            case FALSE: break;
+                        }
+                    }
+                }
+                break;
+
+            case NOR:
+                if (logic_level) {
+                    for (i = 0; i < current_wire->inode[0]->nin; i++) {
+                        switch (tdf_backward_imply2(current_wire->inode[0]->iwire[i],0)) {
+                            case TRUE: pi_is_reach = TRUE; break;
+                            case CONFLICT: return(CONFLICT); break;
+                            case FALSE: break;
+                        }
+                    }
+                }
+                break;
+
+            case BUF:
+                switch (tdf_backward_imply2(current_wire->inode[0]->iwire[0],logic_level)) {
+                    case TRUE: pi_is_reach = TRUE; break;
+                    case CONFLICT: return(CONFLICT); break;
+                    case FALSE: break;
+               }
+                break;
+        }
+	
+        return(pi_is_reach);  
+    }
+}/* end of backward_imply2 */
+
 /* generate multiple patterns by filling unknowns */
 tdf_fill_pattern(vectors, no_of_vectors, no_of_detects)
 char **vectors;
@@ -783,7 +910,6 @@ int *no_of_detects;
 {
   int i, j;
   char *pattern;
-  char *malloc();
   for (i = 0; i < ncktin; i++) {
     if (cktin[i]->value2 == U) {
       if (*no_of_detects < detect_num) {
@@ -801,7 +927,7 @@ int *no_of_detects;
   /* all inputs are not U -> generate a pattern */
   if (i == ncktin) {
     *no_of_detects += 1;
-    pattern = malloc(ncktin);
+    pattern = (char*)malloc(ncktin);
     for (j = 0; j < ncktin; j++) {
       switch (cktin[j]->value2) {
         case 0:
