@@ -431,8 +431,8 @@ fptr fault;
     if (fault->node->type != OUTPUT) {
       
       /* if the faulty gate (aka. gate under test, G.U.T.) output is not U,  Fig. 8.1 */ 
-      if ( (( fault->io && fault->node->owire[0]->value ^ U) || 
-            (!fault->io && fault->node->iwire[fault->index]->value ^ U)) && 
+      if ( (( fault->io && fault->node->owire[0]->value == fault->fault_type) || 
+            (!fault->io && fault->node->iwire[fault->index]->value == fault->fault_type)) && 
            fault->node->owire[0]->value2 ^ U) {
 
 	  /* if GUT output is not D or D_bar, no test possible */
@@ -457,8 +457,8 @@ fptr fault;
           object_frame = 2;
       } 
 
-      else if (( fault->io && fault->node->owire[0]->value ^ U) ||
-               (!fault->io && fault->node->iwire[fault->index]->value ^ U)) { // if faulty gate output is U and activated
+      else if (( fault->io && fault->node->owire[0]->value == fault->fault_type) ||
+               (!fault->io && fault->node->iwire[fault->index]->value == fault->fault_type)) { // if faulty gate output is U and activated
 
           /* if X path disappear, no test possible  */
           if (!(tdf_trace_unknown_path2(fault->node->owire[0])))
