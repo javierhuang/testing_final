@@ -220,6 +220,7 @@ int pori;
         temp_cktin[ncktin] = w;
         if (pori == 1) {
             temp_cktin[ncktin]->flag |= PSTATE;
+            temp_cktin[ncktin]->flag2 |= PSTATE;
         }
         ncktin++;
     }
@@ -327,12 +328,14 @@ create_structure()
     for (i = 0; i < ncktin; i++) {
         cktin[i] = temp_cktin[i];
         cktin[i]->flag |= INPUT;
+        cktin[i]->flag2 |= INPUT;
     }
     cfree(temp_cktin);
 
     for (i = 0; i < ncktout; i++) {
         cktout[i] = temp_cktout[i];
         cktout[i]->flag |= OUTPUT;
+        cktout[i]->flag2 |= OUTPUT;
     }
     cfree(temp_cktout);
 

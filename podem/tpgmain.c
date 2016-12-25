@@ -100,6 +100,9 @@ char *argv[];
 
     generate_fault_list(); //init_flist.c
     //timer(stdout,"for generating fault list",filename);
+    for (i = 0; i < ncktwire; i++) {
+      assert(sort_wlist[i]->flag == sort_wlist[i]->flag2);
+    }
     test(); //test.c
     if(!tdfsim_only){
       compute_fault_coverage(); //init_flist.c

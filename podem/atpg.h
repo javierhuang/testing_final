@@ -17,7 +17,9 @@ struct WIRE {
     short nin;             /* number of input nodes */
     short nout;            /* number of output nodes */
     int value;             /* logic value [0|1|2] of the wire, fault-free sim */
+    int value2;            /* second logic value of the wire */
     int flag;              /* flag word */
+    int flag2;             /* second flag word */
     wptr pnext;            /* general usage link */
     wptr hnext;            /* hash bucket link */
     int level;             /* level of the wire */
