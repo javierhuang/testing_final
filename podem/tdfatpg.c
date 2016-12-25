@@ -70,25 +70,29 @@ tdf_atpg() {
     no_of_all_vectors = 0;
     /* function declaration */
     int tdf_podem();
-    fptr transition_sim_a_vector();
+    fptr tdf_simulate_vectors();
     /* generate TDF fault list */
-    generate_tdf_fault_list(detect_num);
     fault_under_test = first_fault;
     undetect_fault = first_fault;
     /* TDF ATPG */
     while (fault_under_test) {
+        /*
+        for (f = undetect_fault; f; f = f->pnext_undetect) {
+          printf("%s s-a-%d %s\n", f->node->name, f->fault_type, f->io?"output":"input");
+        }
+        */
         switch (tdf_podem(fault_under_test, &current_backtracks, vectors, &no_of_vectors)) {
 	    case MAYBE:
                 no_of_aborted_faults++;
                 /* do not need to break here, still apply the vectors */
             case TRUE:
-                display_patterns(vectors, no_of_vectors);
+                tdf_display_patterns(vectors, no_of_vectors);
                 /* add to all_vectors */
                 for (i = 0; i < no_of_vectors; i++) {
                   all_vectors[no_of_all_vectors] = vectors[i];
                   no_of_all_vectors += 1;
                 }
-                undetect_fault = fault_simulate_vectors(vectors, no_of_vectors, undetect_fault, &total_detect_num);
+                undetect_fault = tdf_simulate_vectors(vectors, no_of_vectors, undetect_fault, &total_detect_num);
                 in_vector_no += no_of_vectors;
                 break;
 	    case FALSE:
@@ -125,13 +129,16 @@ int *no_of_vectors;
     int no_of_detects;
     wptr tdf_test_possible();
     wptr tdf_fault_evaluate();
-    int rand();
     int tdf_set_uniquely_implied_value();
-    void display_fault();
+    
+    /* printf("Fault: %s s-a-%d %s\n", fault->node->name, fault->fault_type, fault->io?"output":"input"); */
 
     /* initialize all circuit wires to unknown */
     for (i = 0; i < ncktwire; i++) {
+        sort_wlist[i]->value = U;
         sort_wlist[i]->value2 = U;
+        sort_wlist[i]->flag |= CHANGED;
+        sort_wlist[i]->flag2 |= CHANGED;
     }
     no_of_backtracks = 0;
     *no_of_vectors = 0;
@@ -147,10 +154,13 @@ int *no_of_vectors;
     /* set the initial goal, assign the first PI.  Fig 7.P1 */
     switch (tdf_set_uniquely_implied_value(fault)) {
         case TRUE: // if a  PI is assigned 
+          sim();
 	  sim2();  // Fig 7.3
-	  if (wfault = tdf_fault_evaluate(fault)) tdf_forward_imply(wfault);// propagate fault effect
+	  if (wfault = tdf_fault_evaluate(fault)) {
+            tdf_forward_imply(wfault);// propagate fault effect
+          }
           // if fault effect reaches PO, done. Fig 7.10
-	  if (tdf_check_test()){
+	  if (tdf_check_test(fault)){
             find_test = TRUE;
             tdf_fill_pattern(vectors, no_of_vectors, &no_of_detects);
             if (no_of_detects == detect_num) return TRUE;
@@ -174,7 +184,6 @@ int *no_of_vectors;
         !(find_test && (no_of_detects == detect_num))) {
         /* check if test possible.   Fig. 7.1 */
         if (wpi = tdf_test_possible(fault)) {
-            wpi->flag2 |= CHANGED;
 	    /* insert a new PI into decision_tree */ 
             wpi->pnext = decision_tree;
             decision_tree = wpi;
@@ -183,23 +192,60 @@ int *no_of_vectors;
 
             while (decision_tree && !wpi) {
 	      /* if both 01 already tried, backtrack. Fig.7.7 */
-	      if (decision_tree->flag2 & ALL_ASSIGNED) {
-		decision_tree->flag2 &= ~ALL_ASSIGNED;  // clear the ALL_ASSIGNED flag
-		decision_tree->value2 = U; // do not assign 0 or 1
-		decision_tree->flag2 |= CHANGED; // this PI has been changed
-		/* remove this PI in decision tree.  see dashed nodes in Fig 6 */
-		wtemp = decision_tree;
-		decision_tree = decision_tree->pnext;
-		wtemp->pnext = NIL(struct WIRE);
-	      }  
-	      /* else, flip last decision, flag ALL_ASSIGNED. Fig. 7.8 */
+              if (decision_tree->frame == 1) {
+                if (decision_tree->flag & ALL_ASSIGNED) {
+                  decision_tree->value = U;
+                  decision_tree->flag |= CHANGED;
+                  if (wtemp = get_next_wire(decision_tree)) {
+                    wtemp->value2 = U;
+                    wtemp->flag2 |= CHANGED;
+                  }
+                  decision_tree->flag &= ~ALL_ASSIGNED;
+                  wtemp = decision_tree;
+                  decision_tree = decision_tree->pnext;
+                  wtemp->pnext = NIL(struct WIRE);
+                }
+                else {
+                  decision_tree->value = decision_tree->value ^ 1;
+                  decision_tree->flag |= CHANGED;
+                  if (wtemp = get_next_wire(decision_tree)) {
+                    wtemp->value2 = wtemp->value2 ^ 1;
+                    wtemp->flag2 |= CHANGED;
+                    assert(decision_tree->value == wtemp->value2);
+                  }
+                  decision_tree->flag |= ALL_ASSIGNED;
+                  no_of_backtracks++;
+                  wpi = decision_tree;
+                }
+              }
+              else {
+	        if (decision_tree->flag2 & ALL_ASSIGNED) {
+		  decision_tree->value2 = U; // do not assign 0 or 1
+		  decision_tree->flag2 |= CHANGED; // this PI has been changed
+                  if (wtemp = get_prev_wire(decision_tree)) {
+                    wtemp->value = U;
+                    wtemp->flag |= CHANGED;
+                  }
+		  decision_tree->flag2 &= ~ALL_ASSIGNED;  // clear the ALL_ASSIGNED flag
+		  /* remove this PI in decision tree.  see dashed nodes in Fig 6 */
+		  wtemp = decision_tree;
+		  decision_tree = decision_tree->pnext;
+		  wtemp->pnext = NIL(struct WIRE);
+	        }  
+	        /* else, flip last decision, flag ALL_ASSIGNED. Fig. 7.8 */
                 else {
 		  decision_tree->value2 = decision_tree->value2 ^ 1; // flip last decision
 		  decision_tree->flag2 |= CHANGED; // this PI has been changed
+                  if (wtemp = get_prev_wire(decision_tree)) {
+                    wtemp->value = wtemp->value ^ 1;
+                    wtemp->flag |= CHANGED;
+                    assert(decision_tree->value2 == wtemp->value);
+                  }
 		  decision_tree->flag2 |= ALL_ASSIGNED;
 		  no_of_backtracks++;
 		  wpi = decision_tree; 
                 }
+              }
             } // while decision tree && ! wpi
             if (!wpi) no_test = TRUE; //decision tree empty,  Fig 7.9
         } // no test possible
@@ -207,17 +253,11 @@ int *no_of_vectors;
 /* this again loop is to generate multiple patterns for a single fault 
  * this part is NOT in the original PODEM paper  */
 again:  if (wpi) {
+            sim();
             sim2();
             if (wfault = tdf_fault_evaluate(fault)) tdf_forward_imply(wfault);
-            if (tdf_check_test()) {
+            if (tdf_check_test(fault)) {
                 find_test = TRUE;
-		/* if multiple patterns per fault, print out every test cube */
-                /* if (detect_num > 1) {
-                    if (*no_of_vectors == 0) {
-                        display_fault(fault);
-                    }
-                    display_io();
-                } */
                 tdf_fill_pattern(vectors, no_of_vectors, &no_of_detects);
 
 		/* keep trying more PI assignments if we want multiple patterns per fault
@@ -225,26 +265,64 @@ again:  if (wpi) {
                 if (detect_num > no_of_detects) {
                     wpi = NIL(struct WIRE);
                     while (decision_tree && !wpi) {
-		      /* backtrack */
-                        if (decision_tree->flag2 & ALL_ASSIGNED) {
-                            decision_tree->flag2 &= ~ALL_ASSIGNED;
-                            decision_tree->value2 = U;
-                            decision_tree->flag2 |= CHANGED;
-                            wtemp = decision_tree;
-                            decision_tree = decision_tree->pnext;
-                            wtemp->pnext = NIL(struct WIRE);
+                    /* if both 01 already tried, backtrack. Fig.7.7 */
+                    if (decision_tree->frame == 1) {
+                      if (decision_tree->flag & ALL_ASSIGNED) {
+                        decision_tree->value = U;
+                        decision_tree->flag |= CHANGED;
+                        if (wtemp = get_next_wire(decision_tree)) {
+                          wtemp->value2 = U;
+                          wtemp->flag2 |= CHANGED;
                         }
-			/* flip last decision */
-                        else {
-                            decision_tree->value2 = decision_tree->value2 ^ 1;
-                            decision_tree->flag2 |= CHANGED;
-                            decision_tree->flag2 |= ALL_ASSIGNED;
-                            no_of_backtracks++;
-                            wpi = decision_tree;
+                        decision_tree->flag &= ~ALL_ASSIGNED;
+                        wtemp = decision_tree;
+                        decision_tree = decision_tree->pnext;
+                        wtemp->pnext = NIL(struct WIRE);
+                      }
+                      else {
+                        decision_tree->value = decision_tree->value ^ 1;
+                        decision_tree->flag |= CHANGED;
+                        if (wtemp = get_next_wire(decision_tree)) {
+                          wtemp->value2 = wtemp->value2 ^ 1;
+                          wtemp->flag2 |= CHANGED;
+                          assert(decision_tree->value == wtemp->value2);
                         }
+                        decision_tree->flag |= ALL_ASSIGNED;
+                        no_of_backtracks++;
+                        wpi = decision_tree;
+                      }
                     }
-                    if (!wpi) no_test = TRUE;
-                    goto again;  // if we want multiple patterns per fault
+                    else {
+                      if (decision_tree->flag2 & ALL_ASSIGNED) {
+                        decision_tree->value2 = U; // do not assign 0 or 1
+                        decision_tree->flag2 |= CHANGED; // this PI has been changed
+                        if (wtemp = get_prev_wire(decision_tree)) {
+                          wtemp->value = U;
+                          wtemp->flag |= CHANGED;
+                        }
+                        decision_tree->flag2 &= ~ALL_ASSIGNED;  // clear the ALL_ASSIGNED flag
+                        /* remove this PI in decision tree.  see dashed nodes in Fig 6 */
+                        wtemp = decision_tree;
+                        decision_tree = decision_tree->pnext;
+                        wtemp->pnext = NIL(struct WIRE);
+                      }  
+                      /* else, flip last decision, flag ALL_ASSIGNED. Fig. 7.8 */
+                      else {
+                        decision_tree->value2 = decision_tree->value2 ^ 1; // flip last decision
+                        decision_tree->flag2 |= CHANGED; // this PI has been changed
+                        if (wtemp = get_prev_wire(decision_tree)) {
+                          wtemp->value = wtemp->value ^ 1;
+                          wtemp->flag |= CHANGED;
+                          assert(decision_tree->value2 == wtemp->value);
+                        }
+                        decision_tree->flag2 |= ALL_ASSIGNED;
+                        no_of_backtracks++;
+                        wpi = decision_tree; 
+                      }
+                    }
+                  } // while decision tree && ! wpi
+                  if (!wpi) no_test = TRUE;
+                  goto again;  // if we want multiple patterns per fault
                 } // if detect_num > no_of_detects
             }  // if check_test()
         } // again
@@ -254,19 +332,20 @@ again:  if (wpi) {
     for (wpi = decision_tree; wpi; wpi = wtemp) {
          wtemp = wpi->pnext;
          wpi->pnext = NIL(struct WIRE);
-         wpi->flag2 &= ~ALL_ASSIGNED;
+         if (wpi->frame == 1)
+           wpi->flag &= ~ALL_ASSIGNED;
+         else
+          wpi->flag2 &= ~ALL_ASSIGNED;
     }
     *current_backtracks = no_of_backtracks;
     tdf_unmark_propagate_tree(fault->node);
     if (no_test) {
-        /*fprintf(stdout,"redundant fault...\n");*/
         return(FALSE);
     }
     else if (no_of_detects == detect_num) {
         return(TRUE);
     }
     else {
-        /*fprintf(stdout,"test aborted due to backtrack limit...\n");*/
         return(MAYBE);
     }
 }/* end of podem */
@@ -285,7 +364,7 @@ fptr fault;
     register wptr w;
 
     if (fault->io) { // if fault is on GUT gate output
-      w = fault->node->owire[0]; // w is GUT output wire
+        w = fault->node->owire[0]; // w is GUT output wire
         if (w->value2 == U) return(NULL);
         if (fault->fault_type == 0 && w->value2 == 1) w->value2 = D; // D means 1/0
         if (fault->fault_type == 1 && w->value2 == 0) w->value2 = B; // B_bar 0/1
@@ -322,8 +401,9 @@ wptr w;
     for (i = 0; i < w->nout; i++) {
         if (w->onode[i]->type != OUTPUT) {
             evaluate2(w->onode[i]);
-            if (w->onode[i]->owire[0]->flag2 & CHANGED)
-	      forward_imply(w->onode[i]->owire[0]); // go one level further
+            if (w->onode[i]->owire[0]->flag2 & CHANGED) {
+	      tdf_forward_imply(w->onode[i]->owire[0]); // go one level further
+            }
             w->onode[i]->owire[0]->flag2 &= ~CHANGED;
         }
     }
@@ -342,15 +422,18 @@ fptr fault;
     register nptr n;
     register wptr object_wire;
     register int object_level;
+    register int object_frame = 0;
     nptr tdf_find_propagate_gate();
     wptr tdf_find_pi_assignment();
-    int tdf_trace_unknown_path();
-
+    int tdf_trace_unknown_path2();
+    
     /* if the fault is not on primary output */
     if (fault->node->type != OUTPUT) {
-
+      
       /* if the faulty gate (aka. gate under test, G.U.T.) output is not U,  Fig. 8.1 */ 
-      if (fault->node->owire[0]->value2 ^ U) {
+      if ( (( fault->io && fault->node->owire[0]->value ^ U) || 
+            (!fault->io && fault->node->iwire[fault->index]->value ^ U)) && 
+           fault->node->owire[0]->value2 ^ U) {
 
 	  /* if GUT output is not D or D_bar, no test possible */
 	  if (!((fault->node->owire[0]->value2 == B) ||
@@ -361,96 +444,102 @@ fptr fault;
 	    return(NULL);
 
 	  /*determine objective level according to the type of n.   Fig 8.8*/ 
-            switch(n->type) {
-                case  AND:
-                case  NOR: object_level = 1; break;
-
-                case NAND:
-                case   OR: object_level = 0; break;
-                default:
-                  /*---- comment out due to error for C2670.sim ---------
-                  fprintf(stderr,
-                          "Internal Error(1st bp. in test_possible)!\n");
-                  exit(-1);
-                  -------------------------------------------------------*/
-                  return(NULL);
-            }
-	    /* object_wire is the gate n output. */
-            object_wire = n->owire[0];
-      }  // if faulty gate output is not U.   (fault->node->owire[0]->value ^ U) 
-
-      else { // if faulty gate output is U
-
-	    /* if X path disappear, no test possible  */
-            if (!(tdf_trace_unknown_path(fault->node->owire[0])))
+          switch(n->type) {
+              case  AND:
+              case  NOR: object_level = 1; break;
+              case NAND:
+              case   OR: object_level = 0; break;
+              default:
                 return(NULL);
+          }
+          /* object_wire is the gate n output. */
+          object_wire = n->owire[0];
+          object_frame = 2;
+      } 
 
-	    /* if fault is on GUT otuput,  Fig 8.2*/
-            if (fault->io) {
-	        /* objective_level is opposite to stuck fault  Fig 8.3 */ 
-                if (fault->fault_type) object_level = 0;
-                else object_level = 1;
-		/* objective_wire is on faulty gate output */
-                object_wire = fault->node->owire[0];
-            }
+      else if (( fault->io && fault->node->owire[0]->value ^ U) ||
+               (!fault->io && fault->node->iwire[fault->index]->value ^ U)) { // if faulty gate output is U and activated
 
-	    /* if fault is on GUT input, Fig 8.2*/ 
-            else {
-	      /* if faulted input is not U  Fig 8.4 */
-                if (fault->node->iwire[fault->index]->value2  ^ U) {
-		  /* determine objective value according to GUT type. Fig 8.9*/
-                    switch (fault->node->type) {
-                        case  AND:
-                        case  NOR: object_level = 1; break;
-                        case NAND:
-                        case   OR: object_level = 0; break;
-                        default:
-                     /*---- comment out due to error for C2670.sim ---------
-                            fprintf(stderr,
-                               "Internal Error(2nd bp. in test_possible)!\n");
-                            exit(-1);
-                     -------------------------------------------------------*/
-                            return(NULL);
-                    }
-		    /*objective wire is GUT output. */
-                    object_wire = fault->node->owire[0];
-                }  // if faulted input is not U
+          /* if X path disappear, no test possible  */
+          if (!(tdf_trace_unknown_path2(fault->node->owire[0])))
+              return(NULL);
 
-                else { // if faulted input is U
-		    /*objective level is opposite to stuck fault.    Fig 8.10*/
-                    if (fault->fault_type) object_level = 0;
-                    else object_level = 1;
-		    /* objective wire is faulty wire itself */
-                    object_wire = fault->node->iwire[fault->index];
-                }
-            }
-        }
+          /* if fault is on GUT otuput,  Fig 8.2*/
+          if (fault->io) {
+              /* objective_level is opposite to stuck fault  Fig 8.3 */ 
+              object_level = fault->fault_type ^ 1;
+              /* objective_wire is on faulty gate output */
+              object_wire = fault->node->owire[0];
+          }
+
+          /* if fault is on GUT input, Fig 8.2*/ 
+          else {
+            /* if faulted input is not U  Fig 8.4 */
+              if (fault->node->iwire[fault->index]->value2 ^ U) {
+                /* determine objective value according to GUT type. Fig 8.9*/
+                  switch (fault->node->type) {
+                      case  AND:
+                      case  NOR: object_level = 1; break;
+                      case NAND:
+                      case   OR: object_level = 0; break;
+                      default:
+                          return(NULL);
+                  }
+                  /*objective wire is GUT output. */
+                  object_wire = fault->node->owire[0];
+              }  // if faulted input is not U
+
+              else { // if faulted input is U
+                  /*objective level is opposite to stuck fault.    Fig 8.10*/
+                  object_level = fault->fault_type ^ 1;
+                  /* objective wire is faulty wire itself */
+                  object_wire = fault->node->iwire[fault->index];
+              }
+          }
+          object_frame = 2;
+      }
+      else { /* v1 activate */
+          /* if fault is on GUT otuput,  Fig 8.2*/
+          if (fault->io) {
+              /* objective_level is opposite to stuck fault  Fig 8.3 */ 
+              object_level = fault->fault_type;
+              /* objective_wire is on faulty gate output */
+              object_wire = fault->node->owire[0];
+          }
+
+          /* if fault is on GUT input, Fig 8.2*/ 
+          else {
+              /*objective level is opposite to stuck fault.    Fig 8.10*/
+              object_level = fault->fault_type;
+              /* objective wire is faulty wire itself */
+              object_wire = fault->node->iwire[fault->index];
+          }
+          object_frame = 1;
+      }
     } // if fault not on PO
 
     else { // else if fault on PO
         /* if faulty PO is still unknown */
-        if (fault->node->iwire[0]->value2 == U) {
+        if (fault->node->iwire[0]->value ^ U) {
 	    /*objective level is opposite to the stuck fault */ 
-            if (fault->fault_type) object_level = 0;
-            else object_level = 1;
+            object_level = fault->fault_type ^ 1;
 	    /* objective wire is the faulty wire itself */
             object_wire = fault->node->iwire[0];
+            object_frame = 2;
         }
 
         else {
-          /*--- comment out due to error for C2670.sim ---
-            fprintf(stderr,"Internal Error(1st bp. in test_possible)!\n");
-            exit(-1);
-	  */
-            return(NULL);
+            object_level = fault->fault_type;
+            object_wire = fault->node->iwire[0];
+            object_frame = 1;
         }
     }// else if fault on PO
 
     /* find a pi to achieve the objective_level on objective_wire.
      * returns NULL if no PI is found.  */ 
-    return(tdf_find_pi_assignment(object_wire,object_level));
+    assert(object_frame == 1 || object_frame == 2);
+    return tdf_find_pi_assignment(object_wire, object_level, object_frame);
    
-
 }/* end of test_possible */
 
 
@@ -458,18 +547,36 @@ fptr fault;
  * returns the wire pointer to PI if succeed.
  * returns NULL if no such PI found.                             */
 wptr
-tdf_find_pi_assignment(object_wire,object_level)
+tdf_find_pi_assignment(object_wire, object_level, object_frame)
 wptr object_wire;
 int object_level;
 {
     register wptr new_object_wire;
     register int new_object_level;
     wptr tdf_find_hardest_control(), tdf_find_easiest_control();
+    wptr wtmp;
 
     /* if PI, assign the same value as objective Fig 9.1, 9.2 */
-    if (object_wire->flag2 & INPUT) {
-    object_wire->value2 = object_level;
-    return(object_wire);
+    if (object_wire->flag & INPUT) {
+      if (object_frame == 1) {
+        object_wire->value = object_level;
+        object_wire->flag |= CHANGED;
+        object_wire->frame = object_frame;
+        if (wtmp = get_next_wire(object_wire)) {
+          wtmp->value2 = object_level;
+          wtmp->flag2 |= CHANGED;
+        }
+      }
+      else {
+        object_wire->value2 = object_level;
+        object_wire->flag2 |= CHANGED;
+        object_wire->frame = object_frame;
+        if (wtmp = get_prev_wire(object_wire)) {
+          wtmp->value = object_level;
+          wtmp->flag |= CHANGED;
+        }
+      }
+      return(object_wire);
     }
 
     /* if not PI, backtrace to PI  Fig 9.3, 9.4, 9.5*/
@@ -477,21 +584,25 @@ int object_level;
         switch(object_wire->inode[0]->type) {
         case   OR:
         case NAND:
-	  if (object_level) new_object_wire = tdf_find_easiest_control(object_wire->inode[0]);  // decision gate
-	  else new_object_wire = tdf_find_hardest_control(object_wire->inode[0]); // imply gate
-                break;
+	  if (object_level)
+            new_object_wire = tdf_find_easiest_control(object_wire->inode[0], object_frame);  // decision gate
+	  else
+            new_object_wire = tdf_find_hardest_control(object_wire->inode[0], object_frame); // imply gate
+          break;
         case  NOR:
         case  AND:
-        if (object_level) new_object_wire = tdf_find_hardest_control(object_wire->inode[0]);
-        else new_object_wire = tdf_find_easiest_control(object_wire->inode[0]);
-                break;
+          if (object_level)
+            new_object_wire = tdf_find_hardest_control(object_wire->inode[0], object_frame);
+          else
+            new_object_wire = tdf_find_easiest_control(object_wire->inode[0], object_frame);
+          break;
         case  NOT:
         case  BUF:
-        new_object_wire = object_wire->inode[0]->iwire[0];
-        break;
+          new_object_wire = object_wire->inode[0]->iwire[0];
+          break;
         }
 
-    switch (object_wire->inode[0]->type) {
+        switch (object_wire->inode[0]->type) {
         case  BUF:
         case  AND:
         case   OR: new_object_level = object_level; break;
@@ -500,22 +611,23 @@ int object_level;
         case  NOR:
         case NAND: new_object_level = object_level ^ 1; break;
         }
-        if (new_object_wire) return(tdf_find_pi_assignment(new_object_wire,new_object_level));
+        if (new_object_wire) return tdf_find_pi_assignment(new_object_wire, new_object_level, object_frame);
         else return(NULL);
     }
 }/* end of find_pi_assignment */
 
-
 /* Fig 9.4 */
 wptr
-tdf_find_hardest_control(n)
+tdf_find_hardest_control(n, object_frame)
 nptr n;
+int object_frame;
 {
     register int i;
     /* because gate inputs are arranged in a increasing level order,
      * larger input index means harder to control */
     for (i = n->nin - 1; i >= 0; i--) {
-        if (n->iwire[i]->value2  == U) return(n->iwire[i]);
+      if (object_frame == 1 && n->iwire[i]->value == U) return n->iwire[i];
+      if (object_frame == 2 && n->iwire[i]->value2 == U) return n->iwire[i];
     }
     return(NULL);
 }/* end of find_hardest_control */
@@ -523,13 +635,15 @@ nptr n;
 
 /* Fig 9.5 */
 wptr
-tdf_find_easiest_control(n)
+tdf_find_easiest_control(n, object_frame)
 nptr n;
+int object_frame;
 {
     register int i;
 
     for (i = 0; i < n->nin; i++) {
-        if (n->iwire[i]->value2  == U) return(n->iwire[i]);
+        if (object_frame == 1 && n->iwire[i]->value == U) return n->iwire[i];
+        if (object_frame == 2 && n->iwire[i]->value2 == U) return n->iwire[i];
     }
     return(NULL);
 }/* end of find_easiest_control */
@@ -544,7 +658,7 @@ int level;
 {
     register int i,j;
     register wptr w;
-    int trace_unknown_path();
+    int tdf_trace_unknown_path2();
 
     /* check every wire in decreasing level order
      * so that wires nearer to PO is checked earlier. */
@@ -560,7 +674,7 @@ int level;
                 w = sort_wlist[i]->inode[0]->iwire[j];
 		/* if there is ont gate intput is D or B */
                 if ((w->value2 == D) || (w->value2 == B)) {
-		  if (tdf_trace_unknown_path(sort_wlist[i])) // check X path  Fig 8.6
+		  if (tdf_trace_unknown_path2(sort_wlist[i])) // check X path  Fig 8.6
 		      return(sort_wlist[i]->inode[0]); // succeed.  returns this gate
                    break;
                 }
@@ -573,7 +687,7 @@ int level;
 /* DFS search for X-path , Fig 8.6
  * returns TRUE if X pth exists
  * returns NULL if no X path exists*/
-tdf_trace_unknown_path(w)
+tdf_trace_unknown_path2(w)
 wptr w;
 {
     register int i;
@@ -583,7 +697,7 @@ wptr w;
     for (i = 0; i < w->nout; i++) {
         wtemp = w->onode[i]->owire[0];
         if (wtemp->value2 == U) {
-            if(tdf_trace_unknown_path(wtemp)) return(TRUE);
+            if(tdf_trace_unknown_path2(wtemp)) return(TRUE);
         }
     }
     return(FALSE); // X-path disappear
@@ -591,16 +705,25 @@ wptr w;
 
 
 /* Check if any D or D_bar reaches PO. Fig 7.4 */
-tdf_check_test()
+tdf_check_test(fault)
+fptr fault;
 {
-    register int i,is_test;
-
+    register int i, is_test;
+    
+    if (fault->io) {
+      if (fault->node->owire[0]->value != fault->fault_type)
+        return FALSE;
+    }
+    else {
+      if (fault->node->iwire[fault->index]->value != fault->fault_type)
+        return FALSE;
+    }
     is_test = FALSE;
     for (i = 0; i < ncktout; i++) {
         if ((cktout[i]->value2 == D) || (cktout[i]->value2 == B)) {
             is_test = TRUE;
+            break;
         }
-        if (is_test == TRUE) break;
     }
     return(is_test);
 }/* end of check_test */
@@ -910,36 +1033,59 @@ int *no_of_detects;
 {
   int i, j;
   char *pattern;
-  for (i = 0; i < ncktin; i++) {
-    if (cktin[i]->value2 == U) {
-      if (*no_of_detects < detect_num) {
-        cktin[i]->value2 = 0;
-        tdf_fill_pattern(vectors, no_of_vectors, no_of_detects);
+  for (i = 0; i <= ncktin; i++) {
+    if (i == ncktin) {
+      if (cktin[0]->value2 == U) {
+        if (*no_of_detects < detect_num) {
+          cktin[0]->value2 = 0;
+          tdf_fill_pattern(vectors, no_of_vectors, no_of_detects);
+        }
+        if (*no_of_detects < detect_num) {
+          cktin[0]->value2 = 1;
+          tdf_fill_pattern(vectors, no_of_vectors, no_of_detects);
+        }
+        cktin[0]->value2 = U;
+        break;
       }
-      if (*no_of_detects < detect_num) {
-        cktin[i]->value2 = 1;
-        tdf_fill_pattern(vectors, no_of_vectors, no_of_detects);
+    }
+    else {
+      if (cktin[i]->value == U) {
+        if (*no_of_detects < detect_num) {
+          cktin[i]->value = 0;
+          tdf_fill_pattern(vectors, no_of_vectors, no_of_detects);
+        }
+        if (*no_of_detects < detect_num) {
+          cktin[i]->value = 1;
+          tdf_fill_pattern(vectors, no_of_vectors, no_of_detects);
+        }
+        cktin[i]->value = U;
+        break;
       }
-      cktin[i]->value2 = U;
-      break;
     }
   }
   /* all inputs are not U -> generate a pattern */
-  if (i == ncktin) {
+  if (i == ncktin + 1) {
     *no_of_detects += 1;
-    pattern = (char*)malloc(ncktin);
+    pattern = (char*)malloc(ncktin + 1);
     for (j = 0; j < ncktin; j++) {
-      switch (cktin[j]->value2) {
+      switch (cktin[j]->value) {
         case 0:
-        case B: pattern[j] = 0; break;
+        case B: pattern[j] = '0'; break;
         case 1:
-        case D: pattern[j] = 1; break;
+        case D: pattern[j] = '1'; break;
         default: printf("something is wrong in tdf_fill_pattern.\n");
       }
     }
+    switch (cktin[0]->value2) {
+      case 0:
+      case B: pattern[ncktin] = '0'; break;
+      case 1:
+      case D: pattern[ncktin] = '1'; break;
+      default: printf("something is wrong in tdf_fill_pattern.\n");
+    }
     /* check duplicate */
     for (j = 0; j < no_of_all_vectors; j++) {
-      if (my_strncmp(pattern, all_vectors[j], ncktin) == 0) {
+      if (my_strncmp(pattern, all_vectors[j], ncktin + 1) == 0) {
         free(pattern);
         break;
       }

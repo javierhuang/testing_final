@@ -10,6 +10,7 @@
 #include "miscell.h"
 
 //DO YOUR PA#3 CODE HERE
+extern int num_of_gate_fault;
 
 /* pack 16 faults into one packet.  simulate 16 faults togeter. 
  * the following variable name is somewhat misleading */
@@ -33,35 +34,32 @@ int num_of_tdf_fault;
 wptr first_faulty_wire;  // points to the start of the linked list 
 extern int debug;
 
-transition_delay_fault_simulation(vectors, num_vectors, total_detect_num)
+fptr
+tdf_simulate_vectors(vectors, num_vectors, flist, total_detect_num)
   char *vectors[];
   int num_vectors;
+  fptr flist;
   int *total_detect_num;
 {
   int i , j, current_detect_num;
-  fptr transition_sim_a_vector();
-  fptr f, flist;
+  fptr tdf_sim_a_vector();
+  fptr f;
 
-  /* for every vector */
-  generate_tdf_fault_list();
-  flist = first_fault;
-  /*
   for (f = flist; f; f = f->pnext_undetect) {
-    printf("%s %d %d\n", f->node->name, f->io, f->eqv_fault_num);
+    assert(f->detect != TRUE);
   }
-  */
-  printf("num of TDF fault: %d\n", num_of_tdf_fault);
+  
   for (i = num_vectors - 1; i >= 0; i--) {
-    flist = transition_sim_a_vector(vectors[i], flist, &current_detect_num);
+    flist = tdf_sim_a_vector(vectors[i], flist, &current_detect_num);
     *total_detect_num += current_detect_num;
     fprintf(stderr,"vector[%d] detects %d faults (%d)\n", i,
             current_detect_num,*total_detect_num);
   }
-  /* return flist; */
+  return flist;
 }
 
 fptr
-transition_sim_a_vector(vector, flist, num_of_current_detect)
+tdf_sim_a_vector(vector, flist, num_of_current_detect)
   char* vector;
   fptr flist;
   int* num_of_current_detect;
@@ -85,10 +83,12 @@ transition_sim_a_vector(vector, flist, num_of_current_detect)
   }
   sim();
   for (f = flist; f; f = f->pnext_undetect) {
-    if (f->fault_type == sort_wlist[f->to_swlist]->value)
+    if (f->fault_type == sort_wlist[f->to_swlist]->value) {
       f->activate = TRUE;
-    else
+    }
+    else {
       f->activate = FALSE;
+    }
   }
   /* check V2 */
   for (i = 0; i < ncktin; i++) {
@@ -237,11 +237,12 @@ generate_tdf_fault_list()
     assert(f->detect_num == detect_num);
   }
 
+  num_of_gate_fault = num_of_tdf_fault;
   //fprintf(stdout,"#number of equivalent faults = %d\n", fault_num);
   return;  
 }/* end of generate_tdf_fault_list */
 
-  fptr
+fptr
 transition_sim_v2(flist, num_of_current_detect)
   fptr flist;
   int *num_of_current_detect;
@@ -304,12 +305,10 @@ transition_sim_v2(flist, num_of_current_detect)
   /* walk through every undetected fault 
    * the undetected fault list is linked by pnext_undetect */
   for (f = flist; f; f = f->pnext_undetect) {
-    if (f->detect == REDUNDANT) { continue;} /* ignore redundant faults */
-    if (f->activate == FALSE) { continue; }
-
     /* consider only active (aka. excited) fault
      * (sa1 with correct output of 0 or sa0 with correct output of 1) */
-    if (f->fault_type != sort_wlist[f->to_swlist]->value) {
+    assert(f->detect != TRUE);
+    if (f->detect != REDUNDANT && f->activate == TRUE && f->fault_type != sort_wlist[f->to_swlist]->value) {
 
       /* if f is a primary output or is directly connected to an primary output
        * the fault is detected */
@@ -453,20 +452,28 @@ transition_sim_v2(flist, num_of_current_detect)
   /* drop detected faults from the FRONT of the undetected fault list */
   while(flist) {
     if (flist->detect == TRUE) {
-      /* printf("(%s %d %d %d)\n", flist->node->name, flist->io, flist->fault_type, flist->eqv_fault_num); */
+      flist->detect_num -= 1;
+      flist->detect = FALSE;
+    }
+    if (flist->detect_num == 0) {
+      flist->detect = TRUE;
       (*num_of_current_detect) += flist->eqv_fault_num;
       f = flist->pnext_undetect;
       flist->pnext_undetect = NULL;
       flist = f;
     }
-    else {break;}
+    else { break; }
   }
-
+  
   /* drop detected faults from WITHIN the undetected fault list*/
   if (flist) {
     for (f = flist; f->pnext_undetect; f = ftemp) {
-      if (f->pnext_undetect->detect == TRUE) { 
-        /* printf("(%s %d %d %d)\n", f->pnext_undetect->node->name, f->pnext_undetect->io, f->pnext_undetect->fault_type, f->pnext_undetect->eqv_fault_num); */
+      if (f->pnext_undetect->detect == TRUE) {
+        f->pnext_undetect->detect_num -= 1;
+        f->pnext_undetect->detect = FALSE;
+      }
+      if (f->pnext_undetect->detect_num == 0) {
+        f->pnext_undetect->detect = TRUE;
         (*num_of_current_detect) += f->pnext_undetect->eqv_fault_num;
         f->pnext_undetect = f->pnext_undetect->pnext_undetect;
         ftemp = f;

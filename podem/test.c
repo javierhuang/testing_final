@@ -9,7 +9,7 @@ test()
     register fptr undetect_fault;
     register fptr f,fault_under_test, ftemp;
     fptr fault_sim_a_vector(), fault_simulate_vectors();
-    void transition_delay_fault_simulation();
+    fptr tdf_simulate_vectors();
     int podem();
     int current_detect_num,total_detect_num, i;
     int total_no_of_backtracks = 0;  // accumulative number of backtracks
@@ -37,7 +37,8 @@ test()
     /* tdFsim only mode */
     if(tdfsim_only)
     {
-        transition_delay_fault_simulation(vectors, sim_vectors, &total_detect_num);
+        undetect_fault = first_fault;
+        undetect_fault = tdf_simulate_vectors(vectors, sim_vectors, undetect_fault, &total_detect_num);
         printf("# Total detected faults: %d\n", total_detect_num);
         return;
     }

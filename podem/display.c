@@ -84,6 +84,32 @@ display_io()
     return;
 }/* end of display_io */
 
+tdf_display_io()
+{
+    register int i;
+
+    for (i = 0; i < ncktin; i++) {
+        switch (cktin[i]->value) {
+            case 0: fprintf(stdout,"0"); break;
+            case 1: fprintf(stdout,"1"); break;
+            case U: fprintf(stdout,"x"); break;
+            case D: fprintf(stdout,"1"); break;
+            case B: fprintf(stdout,"0"); break;
+        }
+    }
+    fprintf(stdout, "\n");
+    for (i = 0; i < ncktin; i++) {
+        switch (cktin[i]->value2) {
+            case 0: fprintf(stdout,"0"); break;
+            case 1: fprintf(stdout,"1"); break;
+            case U: fprintf(stdout,"x"); break;
+            case D: fprintf(stdout,"1"); break;
+            case B: fprintf(stdout,"0"); break;
+        }
+    }
+    fprintf(stdout,"\n");
+    return;
+}/* end of display_io */
 
 display_undetect(undetect_fault)
 fptr undetect_fault;
@@ -197,27 +223,33 @@ fptr f;
 }/* end of display_fault */
 
 void
-display_pattern(pattern)
+tdf_display_pattern(pattern)
 char *pattern;
 {
     int i;
     fprintf(stdout,"T'");
     for (i = 0; i < ncktin; i++) {
         switch (pattern[i]) {
-            case 0: fprintf(stdout,"0"); break;
-            case 1: fprintf(stdout,"1"); break;
+            case '0': fprintf(stdout,"0"); break;
+            case '1': fprintf(stdout,"1"); break;
             default: fprintf(stdout,"?");
         }
+    }
+    fprintf(stdout, " ");
+    switch (pattern[ncktin]) {
+        case '0': fprintf(stdout,"0"); break;
+        case '1': fprintf(stdout,"1"); break;
+        default: fprintf(stdout,"?");
     }
     fprintf(stdout,"'\n");
 }
 
 void
-display_patterns(patterns, no_of_patterns)
+tdf_display_patterns(patterns, no_of_patterns)
 char **patterns;
 int no_of_patterns;
 {
     int i;
     for (i = 0; i < no_of_patterns; i++)
-        display_pattern(patterns[i]);
+        tdf_display_pattern(patterns[i]);
 }
