@@ -59,6 +59,9 @@ tdf_atpg() {
     /* TDF ATPG */
     while (fault_under_test) {
         switch (tdf_podem(fault_under_test, &current_backtracks, vectors, &no_of_vectors)) {
+	    case MAYBE:
+                no_of_aborted_faults++;
+                /* do not need to break here, still apply the vectors */
             case TRUE:
                 display_patterns(vectors, no_of_vectors);
                 /* add to all_vectors */
@@ -67,19 +70,14 @@ tdf_atpg() {
                   no_of_all_vectors += 1;
                 }
                 undetect_fault = fault_simulate_vectors(vectors, no_of_vectors, undetect_fault, &total_detect_num);
-                /* total_detect_num += current_detect_num; */
                 in_vector_no += no_of_vectors;
                 break;
 	    case FALSE:
-                fault_under_test->test_tried = TRUE;
                 fault_under_test->detect = REDUNDANT;
                 no_of_redundant_faults++;
                 break;
-	    case MAYBE:
-                fault_under_test->test_tried = TRUE;
-                no_of_aborted_faults++;
-                break;
         }
+        fault_under_test->test_tried = TRUE;
         fault_under_test = NULL;
         for (f = undetect_fault; f; f = f->pnext_undetect) {
             if (!f->test_tried) {
@@ -245,8 +243,7 @@ again:  if (wpi) {
         /*fprintf(stdout,"redundant fault...\n");*/
         return(FALSE);
     }
-    else if (find_test) {
-        assert(no_of_detects == detect_num);
+    else if (no_of_detects == detect_num) {
         return(TRUE);
     }
     else {
