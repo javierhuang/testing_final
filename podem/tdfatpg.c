@@ -66,7 +66,7 @@ tdf_atpg() {
     /* generated test vectors */
     char **vectors = (char**)malloc(detect_num * sizeof(char*));
     int no_of_vectors;
-    all_vectors = (char**)malloc(1000 * sizeof(char*));
+    all_vectors = (char**)malloc(2000 * sizeof(char*));
     no_of_all_vectors = 0;
     /* function declaration */
     int tdf_podem();
@@ -86,14 +86,14 @@ tdf_atpg() {
                 no_of_aborted_faults++;
                 /* do not need to break here, still apply the vectors */
             case TRUE:
-                tdf_display_patterns(vectors, no_of_vectors);
+                if(!compress){tdf_display_patterns(vectors, no_of_vectors);}
                 /* add to all_vectors */
                 for (i = 0; i < no_of_vectors; i++) {
                   all_vectors[no_of_all_vectors] = vectors[i];
                   no_of_all_vectors += 1;
                 }
                 undetect_fault = tdf_simulate_vectors(vectors, no_of_vectors, undetect_fault, &total_detect_num);
-                in_vector_no += no_of_vectors;
+                in_vector_no +=  no_of_vectors;
                 break;
 	    case FALSE:
                 fault_under_test->detect = REDUNDANT;
@@ -110,6 +110,13 @@ tdf_atpg() {
         }
         total_no_of_backtracks += current_backtracks; // accumulate number of backtracks
         no_of_calls++;
+    }
+    if(compress) {
+        tdf_reverse_compression();
+        tdf_display_patterns(all_vectors, in_vector_no);
+        /*generate_tdf_fault_list();
+        total_detect_num = 0;
+        tdf_simulate_vectors(all_vectors,in_vector_no,first_fault,&total_detect_num);*/
     }
 }
 
@@ -163,6 +170,7 @@ int *no_of_vectors;
 	  if (tdf_check_test(fault)){
             find_test = TRUE;
             tdf_fill_pattern(vectors, no_of_vectors, &no_of_detects);
+            
             if (no_of_detects == detect_num) return TRUE;
             return FALSE;
           }
@@ -1095,4 +1103,35 @@ int *no_of_detects;
       *no_of_vectors += 1;
     }
   }
+}
+
+tdf_reverse_compression()
+{
+    fptr f;
+    int i,j;
+    for(f=first_fault;f;f=f->pnext) {
+        f->detect_num = 0;
+    }
+    i = in_vector_no - 1;
+    for(; i>=0; i--) {
+        tdf_sim_a_vector_com(all_vectors[i]);
+        short delete = TRUE;
+        for(f=first_fault; f; f=f->pnext) {
+            if((f->detect == TRUE) && (f->detect_num <= detect_num) && f->detect_com == TRUE) {
+                delete = FALSE;
+                break;
+            }
+            if(delete == FALSE) break;
+        }
+        if(delete == TRUE) {
+            for(f=first_fault; f; f=f->pnext) {
+                if(f->detect_com == TRUE) f->detect_num --;
+            }
+            for(j=i; j<in_vector_no - 2; j++) {
+                all_vectors[j] = all_vectors[j+1]; 
+            }
+            in_vector_no--;
+        }
+    }
+    //printf("%d\n", in_vector_no);
 }

@@ -32,6 +32,7 @@ struct FAULT {
     short fault_type;     /* s-a-1 or s-a-0 or slow-to-rise or slow-to-fall fault */
     short activate;
     short detect;         /* detection flag */
+    short detect_com;
     short test_tried;     /* flag to indicate test is being tried */
     int eqv_fault_num;    /* number of equivalent faults */
     fptr pnext;           /* pointer to the next element in the list */
