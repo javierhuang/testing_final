@@ -42,6 +42,7 @@ tdf_simulate_vectors(vectors, num_vectors, flist, total_detect_num)
   int *total_detect_num;
 {
   int i , j, current_detect_num;
+  int useful_dummy;
   fptr tdf_sim_a_vector();
   fptr f;
 
@@ -50,7 +51,7 @@ tdf_simulate_vectors(vectors, num_vectors, flist, total_detect_num)
   }
   
   for (i = num_vectors - 1; i >= 0; i--) {
-    flist = tdf_sim_a_vector(vectors[i], flist, &current_detect_num);
+    flist = tdf_sim_a_vector(vectors[i], flist, &current_detect_num, &useful_dummy);
     *total_detect_num += current_detect_num;
     fprintf(stderr,"vector[%d] detects %d faults (%d)\n", i,
             current_detect_num,*total_detect_num);
@@ -59,10 +60,11 @@ tdf_simulate_vectors(vectors, num_vectors, flist, total_detect_num)
 }
 
 fptr
-tdf_sim_a_vector(vector, flist, num_of_current_detect)
+tdf_sim_a_vector(vector, flist, num_of_current_detect, useful)
   char* vector;
   fptr flist;
   int* num_of_current_detect;
+  int* useful;
 {
   int i, nv;
   fptr f;
@@ -106,7 +108,7 @@ tdf_sim_a_vector(vector, flist, num_of_current_detect)
       sort_wlist[i]->value = 2;
     }
   }
-  flist = transition_sim_v2(flist, num_of_current_detect); 
+  flist = transition_sim_v2(flist, num_of_current_detect, useful); 
   return flist;
 }
 
@@ -243,9 +245,10 @@ generate_tdf_fault_list()
 }/* end of generate_tdf_fault_list */
 
 fptr
-transition_sim_v2(flist, num_of_current_detect)
+transition_sim_v2(flist, num_of_current_detect, useful)
   fptr flist;
   int *num_of_current_detect;
+  int *useful;
 {
   wptr w,faulty_wire,wtemp;
   /* array of 16 fptrs, which points to the 16 faults in a simulation packet  */
@@ -265,6 +268,7 @@ transition_sim_v2(flist, num_of_current_detect)
   /* num_of_current_detect is used to keep track of the number of undetected
    * faults detected by this vector, initialize it to zero */
   *num_of_current_detect = 0;
+  *useful = FALSE;
 
   /* Keep track of the minimum wire index of 16 faults in a packet.
    * the start_wire_index is used to keep track of the
@@ -452,6 +456,7 @@ transition_sim_v2(flist, num_of_current_detect)
   /* drop detected faults from the FRONT of the undetected fault list */
   while(flist) {
     if (flist->detect == TRUE) {
+      *useful = TRUE;
       flist->detect_num -= 1;
       flist->detect = FALSE;
     }
@@ -469,6 +474,7 @@ transition_sim_v2(flist, num_of_current_detect)
   if (flist) {
     for (f = flist; f->pnext_undetect; f = ftemp) {
       if (f->pnext_undetect->detect == TRUE) {
+        *useful = TRUE;
         f->pnext_undetect->detect_num -= 1;
         f->pnext_undetect->detect = FALSE;
       }

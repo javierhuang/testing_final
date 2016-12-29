@@ -15,8 +15,9 @@ int find_test;                  // TRUE when a test pattern is found
 int no_test;                    // TRUE when it is proven that no test exists for this fault 
 int unique_imply;
 /* recorded vectors */
-char **all_vectors;
+char **all_vectors, **tmp_vectors;
 int no_of_all_vectors;
+int cap_of_all_vectors;
 
 int
 my_strncmp(s1, s2, n)
@@ -66,7 +67,8 @@ tdf_atpg() {
     /* generated test vectors */
     char **vectors = (char**)malloc(detect_num * sizeof(char*));
     int no_of_vectors;
-    all_vectors = (char**)malloc(2000 * sizeof(char*));
+    all_vectors = (char**)malloc(1000 * sizeof(char*));
+    cap_of_all_vectors = 1000;
     no_of_all_vectors = 0;
     /* function declaration */
     int tdf_podem();
@@ -87,9 +89,17 @@ tdf_atpg() {
                 break;
                 /* do not need to break here, still apply the vectors */
             case TRUE:
-                if(!compress){tdf_display_patterns(vectors, no_of_vectors);}
                 /* add to all_vectors */
                 for (i = 0; i < no_of_vectors; i++) {
+                  /* increase capacity */
+                  if (no_of_all_vectors == cap_of_all_vectors) {
+                    tmp_vectors = malloc(2 * cap_of_all_vectors * sizeof(char*));
+                    for (j = 0; j < cap_of_all_vectors; j++)
+                      tmp_vectors[j] = all_vectors[j];
+                    cap_of_all_vectors *= 2;
+                    free(all_vectors);
+                    all_vectors = tmp_vectors;
+                  }
                   all_vectors[no_of_all_vectors] = vectors[i];
                   no_of_all_vectors += 1;
                 }
@@ -113,12 +123,10 @@ tdf_atpg() {
         no_of_calls++;
     }
     if(compress) {
+        generate_tdf_fault_list(detect_num);
         tdf_reverse_compression();
-        tdf_display_patterns(all_vectors, in_vector_no);
-        /*generate_tdf_fault_list();
-        total_detect_num = 0;
-        tdf_simulate_vectors(all_vectors,in_vector_no,first_fault,&total_detect_num);*/
     }
+    tdf_display_patterns(all_vectors, in_vector_no);
 }
 
 /* generates patterns for a single fault */
@@ -1124,31 +1132,24 @@ int *no_of_detects;
 
 tdf_reverse_compression()
 {
+    fptr flist = first_fault;
     fptr f;
-    int i,j;
-    for(f=first_fault;f;f=f->pnext) {
-        f->detect_num = 0;
-    }
-    i = in_vector_no - 1;
-    for(; i>=0; i--) {
-        tdf_sim_a_vector_com(all_vectors[i]);
-        short delete = TRUE;
-        for(f=first_fault; f; f=f->pnext) {
-            if((f->detect == TRUE) && (f->detect_num <= detect_num) && f->detect_com == TRUE) {
-                delete = FALSE;
-                break;
-            }
-            if(delete == FALSE) break;
+    char **comp_vectors = malloc(in_vector_no * sizeof(char*));
+    int no_of_comp_vectors = 0;
+    int i, j, detect_num, useful;
+    printf("# before compression: %d\n", in_vector_no);
+    for(i = in_vector_no - 1; i >= 0; i--) {
+        flist = tdf_sim_a_vector(all_vectors[i], flist, &detect_num, &useful);
+        if(useful == TRUE) {
+            comp_vectors[no_of_comp_vectors] = all_vectors[i];
+            no_of_comp_vectors += 1;
         }
-        if(delete == TRUE) {
-            for(f=first_fault; f; f=f->pnext) {
-                if(f->detect_com == TRUE) f->detect_num --;
-            }
-            for(j=i; j<in_vector_no - 2; j++) {
-                all_vectors[j] = all_vectors[j+1]; 
-            }
-            in_vector_no--;
+        else {
+            free(all_vectors[i]);
         }
     }
-    //printf("%d\n", in_vector_no);
+    free(all_vectors);
+    all_vectors = comp_vectors;
+    in_vector_no = no_of_all_vectors = no_of_comp_vectors;
+    printf("# after compression: %d\n", in_vector_no);
 }
