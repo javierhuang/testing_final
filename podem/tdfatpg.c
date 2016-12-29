@@ -84,6 +84,7 @@ tdf_atpg() {
         switch (tdf_podem(fault_under_test, &current_backtracks, vectors, &no_of_vectors)) {
 	    case MAYBE:
                 no_of_aborted_faults++;
+                break;
                 /* do not need to break here, still apply the vectors */
             case TRUE:
                 if(!compress){tdf_display_patterns(vectors, no_of_vectors);}
@@ -170,9 +171,15 @@ int *no_of_vectors;
 	  if (tdf_check_test(fault)){
             find_test = TRUE;
             tdf_fill_pattern(vectors, no_of_vectors, &no_of_detects);
-            
-            if (no_of_detects == detect_num) return TRUE;
-            return FALSE;
+            assert(no_of_detects > 0);
+            assert(*no_of_vectors > 0);
+            for (i = 0; no_of_detects + i < detect_num; i++) {
+              vectors[*no_of_vectors + i] = malloc(ncktin + 1);
+              for (j = 0; j <= ncktin; j++)
+                vectors[*no_of_vectors + i][j] = vectors[i][j];
+            }
+            *no_of_vectors += i;
+            return TRUE;
           }
 	  break;
         case CONFLICT:
@@ -347,11 +354,19 @@ again:  if (wpi) {
     }
     *current_backtracks = no_of_backtracks;
     tdf_unmark_propagate_tree(fault->node);
-    if (no_test) {
-        return(FALSE);
+    if (find_test) {
+        assert(no_of_detects > 0);
+        assert(*no_of_vectors > 0);
+        for (i = 0; no_of_detects + i < detect_num; i++) {
+          vectors[*no_of_vectors + i] = malloc(ncktin + 1);
+          for (j = 0; j <= ncktin; j++)
+            vectors[*no_of_vectors + i][j] = vectors[i][j];
+        }
+        *no_of_vectors += i;
+        return TRUE;
     }
-    else if (no_of_detects == detect_num) {
-        return(TRUE);
+    else if (no_test) {
+        return(FALSE);
     }
     else {
         return(MAYBE);
@@ -1094,13 +1109,15 @@ int *no_of_detects;
     /* check duplicate */
     for (j = 0; j < no_of_all_vectors; j++) {
       if (my_strncmp(pattern, all_vectors[j], ncktin + 1) == 0) {
-        free(pattern);
         break;
       }
     }
-    if (j == no_of_all_vectors) {
+    if (j == no_of_all_vectors || *no_of_vectors == 0) {
       vectors[*no_of_vectors] = pattern;
       *no_of_vectors += 1;
+    }
+    else {
+      free(pattern);
     }
   }
 }

@@ -493,7 +493,7 @@ char* vector;
   fptr f;
   fptr transition_sim_v2();
   for(f=first_fault; f; f=f->pnext) {
-      f->detect_com = FALSE;
+    f->detect_com = FALSE;
   }
   /* check V1 */
   for (i = 0; i < ncktin; i++) {
@@ -743,8 +743,8 @@ transition_sim_v2_com()
       f->detect_num += 1;
     }
   }
- /*printf("==================\n");
-  for(f=first_fault; f; f=f->pnext) {
-      printf("%d\n", f->detect_num);   
-  }*/
+  /*printf("==================\n");
+    for(f=first_fault; f; f=f->pnext) {
+    printf("%d\n", f->detect_num);   
+    }*/
 }/* end of fault_sim_a_vector */
