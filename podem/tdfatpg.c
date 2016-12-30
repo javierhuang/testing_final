@@ -56,7 +56,7 @@ wptr w;
 
 tdf_atpg() {
     printf("#compress = %d, detect_num = %d\n", compress, detect_num);
-    fptr undetect_fault;
+    fptr flist, undetect_fault;
     fptr fault_under_test;
     fptr f, ftemp;
     int i, j;
@@ -125,8 +125,10 @@ tdf_atpg() {
         no_of_calls++;
     }
     if(compress) {
-        generate_tdf_fault_list(detect_num);
-        tdf_reverse_compression();
+        flist = generate_detected_fault_list();
+        tdf_reverse_compression(flist);
+        flist = generate_detected_fault_list();
+        tdf_reverse_compression(flist);
     }
     tdf_display_patterns(all_vectors, in_vector_no);
 }
@@ -1157,9 +1159,9 @@ int *no_of_detects;
   }
 }
 
-tdf_reverse_compression()
+tdf_reverse_compression(flist)
+fptr flist;
 {
-    fptr flist = first_fault;
     fptr f;
     char **comp_vectors = malloc(in_vector_no * sizeof(char*));
     int no_of_comp_vectors = 0;
