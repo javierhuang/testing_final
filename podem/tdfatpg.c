@@ -21,6 +21,13 @@ char **all_vectors, **tmp_vectors;
 int no_of_all_vectors;
 int cap_of_all_vectors;
 
+struct _Stack {
+  wptr wire;
+  int frame;
+  int value;
+};
+typedef struct _Stack Stack;
+
 int
 my_strncmp(s1, s2, n)
 char *s1;
@@ -144,12 +151,16 @@ int *no_of_vectors;
     register nptr n;
 
     register wptr wpi; // points to the PI currently being assigned
-    register wptr decision_tree; // the top of  LIFO stack of design_tree
     register wptr wtemp,wfault;    
     int no_of_detects;
     wptr tdf_test_possible();
     wptr tdf_fault_evaluate();
     int tdf_set_uniquely_implied_value();
+
+    Stack *stack = malloc((ncktin + 1) * sizeof(Stack));
+    Stack temp_stack;
+    int nstack = 0;
+    
     
     /* printf("Fault: %s s-a-%d %s\n", fault->node->name, fault->fault_type, fault->io?"output":"input"); */
 
@@ -165,7 +176,6 @@ int *no_of_vectors;
     no_of_detects = 0;
     find_test = FALSE;
     no_test = FALSE;
-    decision_tree = NIL(struct WIRE);
     wfault = NIL(struct WIRE);
     
     tdf_mark_propagate_tree(fault->node);
@@ -211,66 +221,61 @@ int *no_of_vectors;
         !(find_test && (no_of_detects == detect_num + addition_detect))) {
         /* check if test possible.   Fig. 7.1 */
         if (wpi = tdf_test_possible(fault)) {
-	    /* insert a new PI into decision_tree */ 
-            wpi->pnext = decision_tree;
-            decision_tree = wpi;
+	    /* insert a new PI into decision_tree */
+            stack[nstack].wire = wpi;
+            stack[nstack].frame = wpi->frame;
+            stack[nstack].value = (wpi->frame == 1 ? wpi->value : wpi->value2);
+            nstack += 1;
         }
         else { // no test possible using this assignment, backtrack. 
 
-            while (decision_tree && !wpi) {
+            while (nstack > 0 && !wpi) {
+              temp_stack = stack[nstack - 1];
 	      /* if both 01 already tried, backtrack. Fig.7.7 */
-              if (decision_tree->frame == 1) {
-                if (decision_tree->flag & ALL_ASSIGNED) {
-                  decision_tree->value = U;
-                  decision_tree->flag |= CHANGED;
-                  if (wtemp = get_next_wire(decision_tree)) {
+              if (temp_stack.frame == 1) {
+                if (temp_stack.value == 2) {
+                  temp_stack.wire->value = U;
+                  temp_stack.wire->flag |= CHANGED;
+                  if (wtemp = get_next_wire(temp_stack.wire)) {
                     wtemp->value2 = U;
                     wtemp->flag2 |= CHANGED;
                   }
-                  decision_tree->flag &= ~ALL_ASSIGNED;
-                  wtemp = decision_tree;
-                  decision_tree = decision_tree->pnext;
-                  wtemp->pnext = NIL(struct WIRE);
+                  nstack -= 1;
                 }
                 else {
-                  decision_tree->value = decision_tree->value ^ 1;
-                  decision_tree->flag |= CHANGED;
-                  if (wtemp = get_next_wire(decision_tree)) {
+                  temp_stack.value = 2;
+                  temp_stack.wire->value = temp_stack.wire->value ^ 1;
+                  temp_stack.wire->flag |= CHANGED;
+                  if (wtemp = get_next_wire(temp_stack.wire)) {
                     wtemp->value2 = wtemp->value2 ^ 1;
                     wtemp->flag2 |= CHANGED;
-                    assert(decision_tree->value == wtemp->value2);
+                    assert(temp_stack.wire->value == wtemp->value2);
                   }
-                  decision_tree->flag |= ALL_ASSIGNED;
                   no_of_backtracks++;
-                  wpi = decision_tree;
+                  wpi = temp_stack.wire;
                 }
               }
               else {
-	        if (decision_tree->flag2 & ALL_ASSIGNED) {
-		  decision_tree->value2 = U; // do not assign 0 or 1
-		  decision_tree->flag2 |= CHANGED; // this PI has been changed
-                  if (wtemp = get_prev_wire(decision_tree)) {
+                if (temp_stack.value == 2) {
+                  temp_stack.wire->value2 = U;
+                  temp_stack.wire->flag2 |= CHANGED;
+                  if (wtemp = get_prev_wire(temp_stack.wire)) {
                     wtemp->value = U;
                     wtemp->flag |= CHANGED;
                   }
-		  decision_tree->flag2 &= ~ALL_ASSIGNED;  // clear the ALL_ASSIGNED flag
-		  /* remove this PI in decision tree.  see dashed nodes in Fig 6 */
-		  wtemp = decision_tree;
-		  decision_tree = decision_tree->pnext;
-		  wtemp->pnext = NIL(struct WIRE);
-	        }  
-	        /* else, flip last decision, flag ALL_ASSIGNED. Fig. 7.8 */
+                  nstack -= 1;
+                }
                 else {
-		  decision_tree->value2 = decision_tree->value2 ^ 1; // flip last decision
-		  decision_tree->flag2 |= CHANGED; // this PI has been changed
-                  if (wtemp = get_prev_wire(decision_tree)) {
+                  temp_stack.value = 2;
+                  temp_stack.wire->value2 = temp_stack.wire->value2 ^ 1;
+                  temp_stack.wire->flag2 |= CHANGED;
+                  if (wtemp = get_prev_wire(temp_stack.wire)) {
                     wtemp->value = wtemp->value ^ 1;
                     wtemp->flag |= CHANGED;
-                    assert(decision_tree->value2 == wtemp->value);
+                    assert(temp_stack.wire->value2 == wtemp->value);
                   }
-		  decision_tree->flag2 |= ALL_ASSIGNED;
-		  no_of_backtracks++;
-		  wpi = decision_tree; 
+                  no_of_backtracks++;
+                  wpi = temp_stack.wire;
                 }
               }
             } // while decision tree && ! wpi
@@ -279,93 +284,21 @@ int *no_of_vectors;
 
 /* this again loop is to generate multiple patterns for a single fault 
  * this part is NOT in the original PODEM paper  */
-again:  if (wpi) {
+        if (wpi) {
             sim();
             sim2();
             if (wfault = tdf_fault_evaluate(fault)) tdf_forward_imply(wfault);
             if (tdf_check_test(fault)) {
                 find_test = TRUE;
                 tdf_fill_pattern(vectors, no_of_vectors, &no_of_detects);
-
-		/* keep trying more PI assignments if we want multiple patterns per fault
-		 * this is not in the original PODEM paper*/
-                if (detect_num + addition_detect > no_of_detects) {
-                    wpi = NIL(struct WIRE);
-                    while (decision_tree && !wpi) {
-                    /* if both 01 already tried, backtrack. Fig.7.7 */
-                    if (decision_tree->frame == 1) {
-                      if (decision_tree->flag & ALL_ASSIGNED) {
-                        decision_tree->value = U;
-                        decision_tree->flag |= CHANGED;
-                        if (wtemp = get_next_wire(decision_tree)) {
-                          wtemp->value2 = U;
-                          wtemp->flag2 |= CHANGED;
-                        }
-                        decision_tree->flag &= ~ALL_ASSIGNED;
-                        wtemp = decision_tree;
-                        decision_tree = decision_tree->pnext;
-                        wtemp->pnext = NIL(struct WIRE);
-                      }
-                      else {
-                        decision_tree->value = decision_tree->value ^ 1;
-                        decision_tree->flag |= CHANGED;
-                        if (wtemp = get_next_wire(decision_tree)) {
-                          wtemp->value2 = wtemp->value2 ^ 1;
-                          wtemp->flag2 |= CHANGED;
-                          assert(decision_tree->value == wtemp->value2);
-                        }
-                        decision_tree->flag |= ALL_ASSIGNED;
-                        no_of_backtracks++;
-                        wpi = decision_tree;
-                      }
-                    }
-                    else {
-                      if (decision_tree->flag2 & ALL_ASSIGNED) {
-                        decision_tree->value2 = U; // do not assign 0 or 1
-                        decision_tree->flag2 |= CHANGED; // this PI has been changed
-                        if (wtemp = get_prev_wire(decision_tree)) {
-                          wtemp->value = U;
-                          wtemp->flag |= CHANGED;
-                        }
-                        decision_tree->flag2 &= ~ALL_ASSIGNED;  // clear the ALL_ASSIGNED flag
-                        /* remove this PI in decision tree.  see dashed nodes in Fig 6 */
-                        wtemp = decision_tree;
-                        decision_tree = decision_tree->pnext;
-                        wtemp->pnext = NIL(struct WIRE);
-                      }  
-                      /* else, flip last decision, flag ALL_ASSIGNED. Fig. 7.8 */
-                      else {
-                        decision_tree->value2 = decision_tree->value2 ^ 1; // flip last decision
-                        decision_tree->flag2 |= CHANGED; // this PI has been changed
-                        if (wtemp = get_prev_wire(decision_tree)) {
-                          wtemp->value = wtemp->value ^ 1;
-                          wtemp->flag |= CHANGED;
-                          assert(decision_tree->value2 == wtemp->value);
-                        }
-                        decision_tree->flag2 |= ALL_ASSIGNED;
-                        no_of_backtracks++;
-                        wpi = decision_tree; 
-                      }
-                    }
-                  } // while decision tree && ! wpi
-                  if (!wpi) no_test = TRUE;
-                  goto again;  // if we want multiple patterns per fault
-                } // if detect_num > no_of_detects
             }  // if check_test()
         } // again
     } // while (three conditions)
 
-    /* clear everthing */
-    for (wpi = decision_tree; wpi; wpi = wtemp) {
-         wtemp = wpi->pnext;
-         wpi->pnext = NIL(struct WIRE);
-         if (wpi->frame == 1)
-           wpi->flag &= ~ALL_ASSIGNED;
-         else
-          wpi->flag2 &= ~ALL_ASSIGNED;
-    }
+    free(stack);
     *current_backtracks = no_of_backtracks;
     tdf_unmark_propagate_tree(fault->node);
+    
     if (find_test) {
         assert(no_of_detects > 0);
         assert(*no_of_vectors > 0);
