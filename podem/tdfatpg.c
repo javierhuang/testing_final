@@ -76,6 +76,7 @@ tdf_atpg() {
     /* generated test vectors */
     char **vectors = (char**)malloc((detect_num + addition_detect) * sizeof(char*));
     int no_of_vectors;
+    int tmp;
     all_vectors = (char**)malloc(1000 * sizeof(char*));
     cap_of_all_vectors = 1000;
     no_of_all_vectors = 0;
@@ -112,7 +113,9 @@ tdf_atpg() {
                   all_vectors[no_of_all_vectors] = vectors[i];
                   no_of_all_vectors += 1;
                 }
+                tmp = total_detect_num;
                 undetect_fault = tdf_simulate_vectors(vectors, no_of_vectors, undetect_fault, &total_detect_num);
+                assert(tmp != total_detect_num);
                 in_vector_no +=  no_of_vectors;
                 break;
 	    case FALSE:
@@ -158,7 +161,7 @@ int *no_of_vectors;
     int tdf_set_uniquely_implied_value();
 
     Stack *stack = malloc((ncktin + 1) * sizeof(Stack));
-    Stack temp_stack;
+    Stack *pstack;
     int nstack = 0;
     
     
@@ -230,52 +233,52 @@ int *no_of_vectors;
         else { // no test possible using this assignment, backtrack. 
 
             while (nstack > 0 && !wpi) {
-              temp_stack = stack[nstack - 1];
+              pstack = stack + (nstack - 1);
 	      /* if both 01 already tried, backtrack. Fig.7.7 */
-              if (temp_stack.frame == 1) {
-                if (temp_stack.value == 2) {
-                  temp_stack.wire->value = U;
-                  temp_stack.wire->flag |= CHANGED;
-                  if (wtemp = get_next_wire(temp_stack.wire)) {
+              if (pstack->frame == 1) {
+                if (pstack->value == 2) {
+                  pstack->wire->value = U;
+                  pstack->wire->flag |= CHANGED;
+                  if (wtemp = get_next_wire(pstack->wire)) {
                     wtemp->value2 = U;
                     wtemp->flag2 |= CHANGED;
                   }
                   nstack -= 1;
+                  no_of_backtracks++;
                 }
                 else {
-                  temp_stack.value = 2;
-                  temp_stack.wire->value = temp_stack.wire->value ^ 1;
-                  temp_stack.wire->flag |= CHANGED;
-                  if (wtemp = get_next_wire(temp_stack.wire)) {
+                  pstack->value = 2;
+                  pstack->wire->value = pstack->wire->value ^ 1;
+                  pstack->wire->flag |= CHANGED;
+                  if (wtemp = get_next_wire(pstack->wire)) {
                     wtemp->value2 = wtemp->value2 ^ 1;
                     wtemp->flag2 |= CHANGED;
-                    assert(temp_stack.wire->value == wtemp->value2);
+                    assert(pstack->wire->value == wtemp->value2);
                   }
-                  no_of_backtracks++;
-                  wpi = temp_stack.wire;
+                  wpi = pstack->wire;
                 }
               }
               else {
-                if (temp_stack.value == 2) {
-                  temp_stack.wire->value2 = U;
-                  temp_stack.wire->flag2 |= CHANGED;
-                  if (wtemp = get_prev_wire(temp_stack.wire)) {
+                if (pstack->value == 2) {
+                  pstack->wire->value2 = U;
+                  pstack->wire->flag2 |= CHANGED;
+                  if (wtemp = get_prev_wire(pstack->wire)) {
                     wtemp->value = U;
                     wtemp->flag |= CHANGED;
                   }
                   nstack -= 1;
+                  no_of_backtracks++;
                 }
                 else {
-                  temp_stack.value = 2;
-                  temp_stack.wire->value2 = temp_stack.wire->value2 ^ 1;
-                  temp_stack.wire->flag2 |= CHANGED;
-                  if (wtemp = get_prev_wire(temp_stack.wire)) {
+                  pstack->value = 2;
+                  pstack->wire->value2 = pstack->wire->value2 ^ 1;
+                  pstack->wire->flag2 |= CHANGED;
+                  if (wtemp = get_prev_wire(pstack->wire)) {
                     wtemp->value = wtemp->value ^ 1;
                     wtemp->flag |= CHANGED;
-                    assert(temp_stack.wire->value2 == wtemp->value);
+                    assert(pstack->wire->value2 == wtemp->value);
                   }
-                  no_of_backtracks++;
-                  wpi = temp_stack.wire;
+                  wpi = pstack->wire;
                 }
               }
             } // while decision tree && ! wpi
@@ -624,7 +627,7 @@ nptr
 tdf_find_propagate_gate(level)
 int level;
 {
-    register int i,j;
+    register int i,j,k;
     register wptr w;
     int tdf_trace_unknown_path2();
 
@@ -642,6 +645,8 @@ int level;
                 w = sort_wlist[i]->inode[0]->iwire[j];
 		/* if there is ont gate intput is D or B */
                 if ((w->value2 == D) || (w->value2 == B)) {
+                  for (k = i; k < ncktwire; k++)
+                    sort_wlist[k]->flag &= ~VISIT;
 		  if (tdf_trace_unknown_path2(sort_wlist[i])) // check X path  Fig 8.6
 		      return(sort_wlist[i]->inode[0]); // succeed.  returns this gate
                    break;
@@ -661,10 +666,11 @@ wptr w;
     register int i;
     register wptr wtemp;
 
+    w->flag |= VISIT;
     if (w->flag2 & OUTPUT) return(TRUE); // X path exists
     for (i = 0; i < w->nout; i++) {
         wtemp = w->onode[i]->owire[0];
-        if (wtemp->value2 == U) {
+        if (wtemp->value2 == U && !(wtemp->flag & VISIT)) {
             if(tdf_trace_unknown_path2(wtemp)) return(TRUE);
         }
     }

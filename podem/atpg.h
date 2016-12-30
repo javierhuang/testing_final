@@ -74,3 +74,4 @@ struct NODE {
 #define CHANGED       128
 #define FICTITIOUS    256
 #define PSTATE       1024
+#define VISIT        2048
