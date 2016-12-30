@@ -20,6 +20,8 @@ int unique_imply;
 char **all_vectors, **tmp_vectors;
 int no_of_all_vectors;
 int cap_of_all_vectors;
+/* DFS counter */
+int ref_counter;
 
 struct _Stack {
   wptr wire;
@@ -61,6 +63,25 @@ wptr w;
   return NULL;
 }
 
+init_counter()
+{
+  int i;
+  ref_counter = 0;
+  for (i = 0; i < ncktwire; i++)
+    sort_wlist[i]->counter = 0;
+}
+
+inc_counter()
+{
+  int i;
+  ref_counter += 1;
+  if (ref_counter == 10000000) {
+    ref_counter = 0;
+    for (i = 0; i < ncktwire; i++)
+      sort_wlist[i]->counter = 0;
+  }
+}
+
 tdf_atpg() {
     printf("#compress = %d, detect_num = %d\n", compress, detect_num);
     fptr flist, undetect_fault;
@@ -76,7 +97,6 @@ tdf_atpg() {
     /* generated test vectors */
     char **vectors = (char**)malloc((detect_num + addition_detect) * sizeof(char*));
     int no_of_vectors;
-    int tmp;
     all_vectors = (char**)malloc(1000 * sizeof(char*));
     cap_of_all_vectors = 1000;
     no_of_all_vectors = 0;
@@ -86,6 +106,7 @@ tdf_atpg() {
     /* generate TDF fault list */
     fault_under_test = first_fault;
     undetect_fault = first_fault;
+    init_counter();
     /* TDF ATPG */
     while (fault_under_test) {
         /*
@@ -95,6 +116,7 @@ tdf_atpg() {
         */
         switch (tdf_podem(fault_under_test, &current_backtracks, vectors, &no_of_vectors)) {
 	    case MAYBE:
+                printf("MAYBE\n");
                 no_of_aborted_faults++;
                 break;
                 /* do not need to break here, still apply the vectors */
@@ -113,12 +135,12 @@ tdf_atpg() {
                   all_vectors[no_of_all_vectors] = vectors[i];
                   no_of_all_vectors += 1;
                 }
-                tmp = total_detect_num;
                 undetect_fault = tdf_simulate_vectors(vectors, no_of_vectors, undetect_fault, &total_detect_num);
-                assert(tmp != total_detect_num);
+                assert(fault_under_test->detect = TRUE);
                 in_vector_no +=  no_of_vectors;
                 break;
 	    case FALSE:
+                printf("FALSE\n");
                 fault_under_test->detect = REDUNDANT;
                 no_of_redundant_faults++;
                 break;
@@ -164,9 +186,6 @@ int *no_of_vectors;
     Stack *pstack;
     int nstack = 0;
     
-    
-    /* printf("Fault: %s s-a-%d %s\n", fault->node->name, fault->fault_type, fault->io?"output":"input"); */
-
     /* initialize all circuit wires to unknown */
     for (i = 0; i < ncktwire; i++) {
         sort_wlist[i]->value = U;
@@ -231,7 +250,6 @@ int *no_of_vectors;
             nstack += 1;
         }
         else { // no test possible using this assignment, backtrack. 
-
             while (nstack > 0 && !wpi) {
               pstack = stack + (nstack - 1);
 	      /* if both 01 already tried, backtrack. Fig.7.7 */
@@ -430,8 +448,10 @@ fptr fault;
 
       else if (( fault->io && fault->node->owire[0]->value == fault->fault_type) ||
                (!fault->io && fault->node->iwire[fault->index]->value == fault->fault_type)) { // if faulty gate output is U and activated
+          printf("XD\n");
 
           /* if X path disappear, no test possible  */
+          inc_counter();
           if (!(tdf_trace_unknown_path2(fault->node->owire[0])))
               return(NULL);
 
@@ -582,7 +602,9 @@ int object_level;
         case  NOR:
         case NAND: new_object_level = object_level ^ 1; break;
         }
-        if (new_object_wire) return tdf_find_pi_assignment(new_object_wire, new_object_level, object_frame);
+        if (new_object_wire) {
+          return tdf_find_pi_assignment(new_object_wire, new_object_level, object_frame);
+        }
         else return(NULL);
     }
 }/* end of find_pi_assignment */
@@ -645,8 +667,7 @@ int level;
                 w = sort_wlist[i]->inode[0]->iwire[j];
 		/* if there is ont gate intput is D or B */
                 if ((w->value2 == D) || (w->value2 == B)) {
-                  for (k = i; k < ncktwire; k++)
-                    sort_wlist[k]->flag &= ~VISIT;
+                  inc_counter();
 		  if (tdf_trace_unknown_path2(sort_wlist[i])) // check X path  Fig 8.6
 		      return(sort_wlist[i]->inode[0]); // succeed.  returns this gate
                    break;
@@ -666,11 +687,11 @@ wptr w;
     register int i;
     register wptr wtemp;
 
-    w->flag |= VISIT;
+    w->counter = ref_counter;
     if (w->flag2 & OUTPUT) return(TRUE); // X path exists
     for (i = 0; i < w->nout; i++) {
         wtemp = w->onode[i]->owire[0];
-        if (wtemp->value2 == U && !(wtemp->flag & VISIT)) {
+        if (wtemp->value2 == U && wtemp->counter != ref_counter) {
             if(tdf_trace_unknown_path2(wtemp)) return(TRUE);
         }
     }

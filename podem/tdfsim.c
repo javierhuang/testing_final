@@ -52,8 +52,8 @@ tdf_simulate_vectors(vectors, num_vectors, flist, total_detect_num)
   for (i = num_vectors - 1; i >= 0; i--) {
     flist = tdf_sim_a_vector(vectors[i], flist, &current_detect_num, &useful_dummy);
     *total_detect_num += current_detect_num;
-    fprintf(stderr,"vector[%d] detects %d faults (%d)\n", i,
-            current_detect_num,*total_detect_num);
+    /* fprintf(stderr,"vector[%d] detects %d faults (%d)\n", i,
+            current_detect_num,*total_detect_num); */
   }
   return flist;
 }

@@ -33,6 +33,7 @@ struct WIRE {
     int fault_flag;        /* indicates the fault-injected bit position, for pfedfs */
     int wlist_index;       /* index into the sorted_wlist array */
     int frame;             /* frame in decision tree */
+    int counter;           /* DFS counter */
 };
 
 // a node is a gate
@@ -74,4 +75,3 @@ struct NODE {
 #define CHANGED       128
 #define FICTITIOUS    256
 #define PSTATE       1024
-#define VISIT        2048

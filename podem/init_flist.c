@@ -402,11 +402,10 @@ compute_tdf_coverage()
     
     /* print out fault coverage results */
     fprintf(stderr,"\n");
-    fprintf(stderr,"#FAULT COVERAGE RESULTS :\n");
-    fprintf(stderr,"#number of test vectors = %d\n",in_vector_no);
-    fprintf(stderr,"#total number of tdf faults = %d\n",num_of_gate_fault);
-    fprintf(stderr,"#total number of detected tdf faults = %d\n",no_of_detect);
-    fprintf(stderr,"#total tdf coverage = %5.2f%%\n",gate_fault_coverage);
+    fprintf(stderr,"#Number of test vectors = %d\n",in_vector_no);
+    fprintf(stderr,"#Total transition delay faults = %d\n",num_of_gate_fault);
+    fprintf(stderr,"#Total detected faults = %d\n",no_of_detect);
+    fprintf(stderr,"#fault coverage = %f%%\n",gate_fault_coverage);
     fprintf(stderr,"\n");
     return;  
 }/* end of compute_fault_coverage */
