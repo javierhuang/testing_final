@@ -231,6 +231,34 @@ compute_fault_coverage()
     return;  
 }/* end of compute_fault_coverage */
 
+compute_tdf_coverage()
+{
+    register double gate_fault_coverage,eqv_gate_fault_coverage;
+    register int no_of_detect,eqv_no_of_detect,eqv_num_of_gate_fault;
+    register fptr f;
+
+    debug = 0;
+    no_of_detect = 0;
+    gate_fault_coverage = 0;
+    
+    for (f = first_fault; f; f = f->pnext) {
+      if (f->detect == TRUE) {
+        no_of_detect += f->eqv_fault_num;
+      }
+    }
+    if (num_of_gate_fault != 0) 
+      gate_fault_coverage = (((double) no_of_detect) / num_of_gate_fault) * 100;
+    
+    /* print out fault coverage results */
+    fprintf(stderr,"\n");
+    fprintf(stderr,"#FAULT COVERAGE RESULTS :\n");
+    fprintf(stderr,"#number of test vectors = %d\n",in_vector_no);
+    fprintf(stderr,"#total number of tdf faults = %d\n",num_of_gate_fault);
+    fprintf(stderr,"#total number of detected tdf faults = %d\n",no_of_detect);
+    fprintf(stderr,"#total tdf coverage = %5.2f%%\n",gate_fault_coverage);
+    fprintf(stderr,"\n");
+    return;  
+}/* end of compute_fault_coverage */
 
 /* for each PI and PO in the whole circuit,
    create a dummy PI gate to feed each PI wire 

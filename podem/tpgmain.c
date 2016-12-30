@@ -6,7 +6,7 @@
 #include "miscell.h"
 
 extern char *filename;
-int backtrack_limit = 50;       /* default value */
+int backtrack_limit = 200;       /* default value */
 int total_attempt_num = 1;      /* default value */
 
 main(argc,argv)
@@ -109,6 +109,8 @@ char *argv[];
     test(); //test.c
 
     compute_fault_coverage(); //init_flist.c
+    if (tdfsim_only || tdfatpg_only)
+      compute_tdf_coverage();
 
     //timer(stdout,"for test pattern generation",filename);
     exit(0);
