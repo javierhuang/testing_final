@@ -287,6 +287,7 @@ generate_tdf_fault_list()
   }
 
   num_of_gate_fault = num_of_tdf_fault;
+  printf("#num of gate fault: %d\n", num_of_gate_fault);
   //fprintf(stdout,"#number of equivalent faults = %d\n", fault_num);
   return;  
 }/* end of generate_tdf_fault_list */

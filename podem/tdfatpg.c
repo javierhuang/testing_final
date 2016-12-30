@@ -116,7 +116,6 @@ tdf_atpg() {
         */
         switch (tdf_podem(fault_under_test, &current_backtracks, vectors, &no_of_vectors)) {
 	    case MAYBE:
-                printf("MAYBE\n");
                 no_of_aborted_faults++;
                 break;
                 /* do not need to break here, still apply the vectors */
@@ -140,7 +139,6 @@ tdf_atpg() {
                 in_vector_no +=  no_of_vectors;
                 break;
 	    case FALSE:
-                printf("FALSE\n");
                 fault_under_test->detect = REDUNDANT;
                 no_of_redundant_faults++;
                 break;
@@ -448,7 +446,6 @@ fptr fault;
 
       else if (( fault->io && fault->node->owire[0]->value == fault->fault_type) ||
                (!fault->io && fault->node->iwire[fault->index]->value == fault->fault_type)) { // if faulty gate output is U and activated
-          printf("XD\n");
 
           /* if X path disappear, no test possible  */
           inc_counter();

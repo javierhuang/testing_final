@@ -1,6 +1,6 @@
 #
 
-CFLAGS = -g 
+CFLAGS = -O2
 
 FILES = tpgmain.o input.o level.o sim.o podem.o test.o init_flist.o faultsim.o display.o tdfsim.o tdfatpg.o
 
