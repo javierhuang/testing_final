@@ -175,7 +175,6 @@ int *no_of_vectors;
 
     register wptr wpi; // points to the PI currently being assigned
     register wptr wtemp,wfault;    
-    int no_of_detects;
     wptr tdf_test_possible();
     wptr tdf_fault_evaluate();
     int tdf_set_uniquely_implied_value();
@@ -193,7 +192,6 @@ int *no_of_vectors;
     }
     no_of_backtracks = 0;
     *no_of_vectors = 0;
-    no_of_detects = 0;
     find_test = FALSE;
     no_test = FALSE;
     wfault = NIL(struct WIRE);
@@ -212,15 +210,8 @@ int *no_of_vectors;
           // if fault effect reaches PO, done. Fig 7.10
 	  if (tdf_check_test(fault)){
             find_test = TRUE;
-            tdf_fill_pattern(vectors, no_of_vectors, &no_of_detects);
-            assert(no_of_detects > 0);
-            assert(*no_of_vectors > 0);
-            for (i = 0; no_of_detects + i < detect_num + addition_detect; i++) {
-              vectors[*no_of_vectors + i] = malloc(ncktin + 1);
-              for (j = 0; j <= ncktin; j++)
-                vectors[*no_of_vectors + i][j] = vectors[i][j];
-            }
-            *no_of_vectors += i;
+            tdf_fill_pattern(vectors, no_of_vectors, fault->detect_num + addition_detect);
+            assert(*no_of_vectors == fault->detect_num + addition_detect);
             return TRUE;
           }
 	  break;
@@ -238,7 +229,7 @@ int *no_of_vectors;
             printf("OK\n");
      * 3. already find a test pattern AND no_of_patterns meets required detect_num */
     while ((no_of_backtracks < backtrack_limit) && !no_test &&
-        !(find_test && (no_of_detects == detect_num + addition_detect))) {
+        !(find_test && (*no_of_vectors == fault->detect_num + addition_detect))) {
         /* check if test possible.   Fig. 7.1 */
         if (wpi = tdf_test_possible(fault)) {
 	    /* insert a new PI into decision_tree */
@@ -301,15 +292,14 @@ int *no_of_vectors;
             if (!wpi) no_test = TRUE; //decision tree empty,  Fig 7.9
         } // no test possible
 
-/* this again loop is to generate multiple patterns for a single fault 
- * this part is NOT in the original PODEM paper  */
         if (wpi) {
             sim();
             sim2();
             if (wfault = tdf_fault_evaluate(fault)) tdf_forward_imply(wfault);
             if (tdf_check_test(fault)) {
                 find_test = TRUE;
-                tdf_fill_pattern(vectors, no_of_vectors, &no_of_detects);
+                tdf_fill_pattern(vectors, no_of_vectors, fault->detect_num + addition_detect);
+                assert(*no_of_vectors == fault->detect_num + addition_detect);
             }  // if check_test()
         } // again
     } // while (three conditions)
@@ -319,21 +309,13 @@ int *no_of_vectors;
     tdf_unmark_propagate_tree(fault->node);
     
     if (find_test) {
-        assert(no_of_detects > 0);
-        assert(*no_of_vectors > 0);
-        for (i = 0; no_of_detects + i < detect_num + addition_detect; i++) {
-          vectors[*no_of_vectors + i] = malloc(ncktin + 1);
-          for (j = 0; j <= ncktin; j++)
-            vectors[*no_of_vectors + i][j] = vectors[i][j];
-        }
-        *no_of_vectors += i;
         return TRUE;
     }
     else if (no_test) {
-        return(FALSE);
+        return FALSE;
     }
     else {
-        return(MAYBE);
+        return MAYBE;
     }
 }/* end of podem */
 
@@ -1021,7 +1003,7 @@ int logic_level;
 tdf_fill_pattern(vectors, no_of_vectors, no_of_detects)
 char **vectors;
 int *no_of_vectors;
-int *no_of_detects;
+int no_of_detects;
 {
   int i, j;
   char *pattern;
@@ -1090,7 +1072,7 @@ int *no_of_detects;
     }
   }
   */
-  while (*no_of_detects < detect_num + addition_detect) {
+  while (*no_of_vectors < no_of_detects) {
     pattern = (char*)malloc(ncktin + 1);
     for (j = 0; j < ncktin; j++) {
       switch (cktin[j]->value) {
@@ -1112,7 +1094,6 @@ int *no_of_detects;
     }
     vectors[*no_of_vectors] = pattern;
     *no_of_vectors += 1;
-    *no_of_detects += 1;
   }
 }
 
