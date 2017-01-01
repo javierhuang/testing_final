@@ -97,12 +97,14 @@ tdf_atpg() {
     /* generated test vectors */
     char **vectors = (char**)malloc((detect_num + addition_detect) * sizeof(char*));
     int no_of_vectors;
+    /* initialize all_vectors */
     all_vectors = (char**)malloc(1000 * sizeof(char*));
     cap_of_all_vectors = 1000;
     no_of_all_vectors = 0;
     /* function declaration */
     int tdf_podem();
     fptr tdf_simulate_vectors();
+    void random_switch_pattern();
     /* generate TDF fault list */
     fault_under_test = first_fault;
     undetect_fault = first_fault;
@@ -157,6 +159,10 @@ tdf_atpg() {
     if(compress) {
         flist = generate_detected_fault_list();
         tdf_reverse_compression(flist);
+        random_switch_pattern();
+        flist = generate_detected_fault_list();
+        tdf_reverse_compression(flist);
+        random_switch_pattern();
         flist = generate_detected_fault_list();
         tdf_reverse_compression(flist);
     }
@@ -1121,3 +1127,15 @@ fptr flist;
     printf("# after compression: %d\n", in_vector_no);
 }
 
+void
+random_switch_pattern()
+{
+  int i, j;
+  char* tmp;
+  for (i = 0; i < in_vector_no; i++) {
+    j = rand() % (i+1);
+    tmp = all_vectors[i];
+    all_vectors[i] = all_vectors[j];
+    all_vectors[j] = tmp;
+  }
+}
