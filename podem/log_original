@@ -1,0 +1,299 @@
+
+running c1355
+
+#Number of test vectors = 479
+#Total transition delay faults = 2726
+#Total detected faults = 1047
+#fault coverage = 38.407924%
+
+
+real	0m0.453s
+user	0m0.452s
+sys	0m0.000s
+
+#Circuit Summary:
+#---------------
+#number of inputs = 41
+#number of outputs = 32
+#number of gates = 554
+#number of wires = 595
+
+# Result:
+-----------------------
+# Total transition delay faults: 2726
+# Total detected faults: 1047
+# fault coverage: 38.407924 %
+
+running c17
+
+#Number of test vectors = 67
+#Total transition delay faults = 34
+#Total detected faults = 32
+#fault coverage = 94.117647%
+
+
+real	0m0.002s
+user	0m0.000s
+sys	0m0.000s
+
+#Circuit Summary:
+#---------------
+#number of inputs = 5
+#number of outputs = 2
+#number of gates = 6
+#number of wires = 11
+
+# Result:
+-----------------------
+# Total transition delay faults: 34
+# Total detected faults: 32
+# fault coverage: 94.117647 %
+
+running c1908
+
+#Number of test vectors = 303
+#Total transition delay faults = 3820
+#Total detected faults = 1178
+#fault coverage = 30.837696%
+
+
+real	0m0.799s
+user	0m0.796s
+sys	0m0.000s
+
+#Circuit Summary:
+#---------------
+#number of inputs = 33
+#number of outputs = 25
+#number of gates = 882
+#number of wires = 915
+
+# Result:
+-----------------------
+# Total transition delay faults: 3820
+# Total detected faults: 1178
+# fault coverage: 30.837696 %
+
+running c2670
+
+#Number of test vectors = 1461
+#Total transition delay faults = 6520
+#Total detected faults = 6129
+#fault coverage = 94.003067%
+
+
+real	0m1.656s
+user	0m1.652s
+sys	0m0.000s
+
+#Circuit Summary:
+#---------------
+#number of inputs = 233
+#number of outputs = 140
+#number of gates = 1785
+#number of wires = 2018
+
+# Result:
+-----------------------
+# Total transition delay faults: 6520
+# Total detected faults: 6129
+# fault coverage: 94.003067 %
+
+running c3540
+
+#Number of test vectors = 692
+#Total transition delay faults = 7910
+#Total detected faults = 1837
+#fault coverage = 23.223767%
+
+
+real	0m8.347s
+user	0m8.324s
+sys	0m0.008s
+
+#Circuit Summary:
+#---------------
+#number of inputs = 50
+#number of outputs = 22
+#number of gates = 2082
+#number of wires = 2132
+
+# Result:
+-----------------------
+# Total transition delay faults: 7910
+# Total detected faults: 1837
+# fault coverage: 23.223767 %
+
+running c432
+
+#Number of test vectors = 177
+#Total transition delay faults = 1110
+#Total detected faults = 129
+#fault coverage = 11.621622%
+
+
+real	0m0.121s
+user	0m0.120s
+sys	0m0.000s
+
+#Circuit Summary:
+#---------------
+#number of inputs = 36
+#number of outputs = 7
+#number of gates = 245
+#number of wires = 281
+
+# Result:
+-----------------------
+# Total transition delay faults: 1110
+# Total detected faults: 129
+# fault coverage: 11.621622 %
+
+running c499
+
+#Number of test vectors = 726
+#Total transition delay faults = 2390
+#Total detected faults = 2205
+#fault coverage = 92.259414%
+
+
+real	0m0.306s
+user	0m0.300s
+sys	0m0.004s
+
+#Circuit Summary:
+#---------------
+#number of inputs = 41
+#number of outputs = 32
+#number of gates = 554
+#number of wires = 595
+
+# Result:
+-----------------------
+# Total transition delay faults: 2390
+# Total detected faults: 2205
+# fault coverage: 92.259414 %
+
+running c5315
+
+#Number of test vectors = 1354
+#Total transition delay faults = 10094
+#Total detected faults = 9761
+#fault coverage = 96.701011%
+
+
+real	0m2.247s
+user	0m2.244s
+sys	0m0.000s
+
+#Circuit Summary:
+#---------------
+#number of inputs = 178
+#number of outputs = 123
+#number of gates = 2296
+#number of wires = 2474
+
+# Result:
+-----------------------
+# Total transition delay faults: 10094
+# Total detected faults: 9761
+# fault coverage: 96.701011 %
+
+running c6288
+
+#Number of test vectors = 456
+#Total transition delay faults = 17376
+#Total detected faults = 16956
+#fault coverage = 97.582873%
+
+
+real	0m3.801s
+user	0m3.732s
+sys	0m0.068s
+
+#Circuit Summary:
+#---------------
+#number of inputs = 32
+#number of outputs = 32
+#number of gates = 4800
+#number of wires = 4832
+
+# Result:
+-----------------------
+# Total transition delay faults: 17376
+# Total detected faults: 16956
+# fault coverage: 97.582873 %
+
+running c7552
+
+#Number of test vectors = 2497
+#Total transition delay faults = 19456
+#Total detected faults = 19113
+#fault coverage = 98.237048%
+
+
+real	0m14.261s
+user	0m14.228s
+sys	0m0.028s
+
+#Circuit Summary:
+#---------------
+#number of inputs = 207
+#number of outputs = 108
+#number of gates = 5679
+#number of wires = 5886
+
+# Result:
+-----------------------
+# Total transition delay faults: 19456
+# Total detected faults: 19113
+# fault coverage: 98.237048 %
+
+running c880
+
+#Number of test vectors = 521
+#Total transition delay faults = 2104
+#Total detected faults = 1057
+#fault coverage = 50.237643%
+
+
+real	0m0.269s
+user	0m0.264s
+sys	0m0.004s
+
+#Circuit Summary:
+#---------------
+#number of inputs = 60
+#number of outputs = 26
+#number of gates = 545
+#number of wires = 605
+
+# Result:
+-----------------------
+# Total transition delay faults: 2104
+# Total detected faults: 1057
+# fault coverage: 50.237643 %
+running sin
+
+#Number of test vectors = 3432
+#Total transition delay faults = 28998
+#Total detected faults = 27342
+#fault coverage = 94.289261%
+
+
+real	1m13.746s
+user	1m13.620s
+sys	0m0.108s
+
+#Circuit Summary:
+#---------------
+#number of inputs = 24
+#number of outputs = 25
+#number of gates = 6689
+#number of wires = 6713
+
+# Result:
+-----------------------
+# Total transition delay faults: 28998
+# Total detected faults: 27342
+# fault coverage: 94.289261 %

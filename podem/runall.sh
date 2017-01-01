@@ -4,6 +4,11 @@ N=10
 for i in $(seq 0 $N); do
   echo ""
   echo "running ${cases[$i]}"
-  ./atpg -ndet 8 -tdfatpg -compression ../sample_circuits/${cases[$i]}.ckt > pat/${cases[$i]}.pat
+  time ./atpg -ndet 8 -tdfatpg -compression ../sample_circuits/${cases[$i]}.ckt > pat/${cases[$i]}.pat
   ../ref/golden_tdfsim -ndet 8 -tdfsim pat/${cases[$i]}.pat ../sample_circuits/${cases[$i]}.ckt
 done
+
+echo "running sin"
+time ./atpg -ndet 8 -tdfatpg -compression ../benchmarks/sin.ckt > pat/sin.pat
+../ref/golden_tdfsim -ndet 8 -tdfsim pat/sin.pat ../benchmarks/sin.ckt
+
