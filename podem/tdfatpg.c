@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "global.h"
 #include "miscell.h"
 
@@ -10,6 +11,7 @@
 
 #define addition_detect 0
 
+extern int time_limit;
 extern int backtrack_limit;     // maximum number of backtracked allowed, defatult is 50
 extern int detect_num;          // number of patterns per fault, default is 1
 int no_of_backtracks;           // current number of backtracks
@@ -94,6 +96,7 @@ tdf_atpg() {
     int no_of_aborted_faults = 0;
     int no_of_redundant_faults = 0;
     int no_of_calls = 0;
+    clock_t st_time = clock();
     /* generated test vectors */
     char **vectors = (char**)malloc((detect_num + addition_detect) * sizeof(char*));
     int no_of_vectors;
@@ -110,7 +113,7 @@ tdf_atpg() {
     undetect_fault = first_fault;
     init_counter();
     /* TDF ATPG */
-    while (fault_under_test) {
+    while (fault_under_test && (clock() - st_time) / CLOCKS_PER_SEC < time_limit) {
         /*
         for (f = undetect_fault; f; f = f->pnext_undetect) {
           printf("%s s-a-%d %s\n", f->node->name, f->fault_type, f->io?"output":"input");

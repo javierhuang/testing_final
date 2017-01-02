@@ -6,6 +6,7 @@
 #include "miscell.h"
 
 extern char *filename;
+int time_limit = 3000;          /* default 50 mins */
 int backtrack_limit = 50;       /* default value */
 int total_attempt_num = 1;      /* default value */
 
@@ -58,6 +59,10 @@ char *argv[];
         }
         else if (strcmp(argv[i], "-ndet") == 0) {
             detect_num = atoi(argv[i+1]);
+            i += 2;
+        }
+        else if (strcmp(argv[i], "-time") == 0) {
+            time_limit = atoi(argv[i+1]);
             i += 2;
         }
         else if (argv[i][0] == '-'){
