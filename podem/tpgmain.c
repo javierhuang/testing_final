@@ -6,7 +6,7 @@
 #include "miscell.h"
 
 extern char *filename;
-int time_limit = 3000;          /* default 50 mins */
+int time_limit = 2400;          /* default 40 mins */
 int backtrack_limit = 50;       /* default value */
 int total_attempt_num = 1;      /* default value */
 
