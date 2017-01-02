@@ -74,12 +74,12 @@ init_counter()
 inc_counter()
 {
   int i;
-  ref_counter += 1;
-  if (ref_counter == 10000000) {
+  if (ref_counter == 1000000000) {
     ref_counter = 0;
     for (i = 0; i < ncktwire; i++)
       sort_wlist[i]->counter = 0;
   }
+  ref_counter += 1;
 }
 
 tdf_atpg() {
