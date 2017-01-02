@@ -171,7 +171,7 @@ generate_tdf_fault_list()
   num_of_tdf_fault = 0; // totle number of faults in the whole circuit
 
   /* walk through every wire in the circuit*/
-  for (i = 0; i  < ncktwire; i++) {
+  for (i = ncktwire - 1; i >= 0; i--) {
     w = sort_wlist[i]; // each wire w
     n = w->inode[0]; // w is the gate n output wire
 

@@ -165,6 +165,9 @@ tdf_atpg() {
         random_switch_pattern();
         flist = generate_detected_fault_list();
         tdf_reverse_compression(flist);
+        /* random_switch_pattern();
+        flist = generate_detected_fault_list();
+        tdf_reverse_compression(flist); */
     }
     tdf_display_patterns(all_vectors, in_vector_no);
 }

@@ -1,8 +1,10 @@
 #include <stdio.h>
+#include <math.h>
 #include "global.h"
 #include "miscell.h"
 
 extern int total_attempt_num;
+extern int backtrack_limit;
 
 test()
 {
@@ -44,6 +46,9 @@ test()
     }
     if(tdfatpg_only)
     {
+        backtrack_limit = (int)sqrt(ncktwire) + ncktin / 10 + 70;
+        /* backtrack_limit = 300; */
+        fprintf(stderr, "limit = %d\n", backtrack_limit);
         tdf_atpg();
         return;
     }
