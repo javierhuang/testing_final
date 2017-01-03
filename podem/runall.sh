@@ -1,14 +1,20 @@
-cases=("c17" "c432" "c499" "c880" "c1355" "c1908" "c2670" "c3540" "c5315" "c6288" "c7552")
+sample_cases=("c17" "c432" "c499" "c880" "c1355" "c1908" "c2670" "c3540" "c5315" "c6288" "c7552")
+benchmark_cases=("adder" "bar" "dec" "max" "sin")
 N=10
+M=5
 
 for i in $(seq 0 $N); do
   echo ""
-  echo "running ${cases[$i]}"
-  time ./atpg -ndet 8 -tdfatpg -compression ../sample_circuits/${cases[$i]}.ckt > pat/${cases[$i]}.pat
-  ../ref/golden_tdfsim -ndet 8 -tdfsim pat/${cases[$i]}.pat ../sample_circuits/${cases[$i]}.ckt
+  echo "running ${sample_cases[$i]}"
+  time ./atpg -ndet 8 -tdfatpg -compression ../sample_circuits/${sample_cases[$i]}.ckt > pat/${sample_cases[$i]}.pat
+  ../ref/golden_tdfsim -ndet 8 -tdfsim pat/${sample_cases[$i]}.pat ../sample_circuits/${sample_cases[$i]}.ckt
 done
 
-echo "running sin"
-time ./atpg -ndet 8 -tdfatpg -compression ../benchmarks/sin.ckt > pat/sin.pat
-../ref/golden_tdfsim -ndet 8 -tdfsim pat/sin.pat ../benchmarks/sin.ckt
+for i in $(seq 0 $M); do
+  echo ""
+  echo "running ${benchmark_cases[$i]}"
+  time ./atpg -ndet 8 -tdfatpg -compression ../benchmarks/${benchmark_cases[$i]}.ckt > pat/${benchmark_cases[$i]}.pat
+  ../ref/golden_tdfsim -ndet 8 -tdfsim pat/${benchmark_cases[$i]}.pat ../benchmarks/${benchmark_cases[$i]}.ckt
+done
+
 
