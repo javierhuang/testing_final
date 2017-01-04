@@ -8,6 +8,7 @@
 /**********************************************************************/
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "global.h"
 #include "miscell.h"
 
@@ -285,6 +286,25 @@ generate_tdf_fault_list()
     f->fault_no = fault_num;
     assert(f->detect_num == detect_num);
   }
+
+  /* random shuffle */
+  fptr *farr = malloc(fault_num * sizeof(fptr));
+  for (f = first_fault, i = 0; f; f = f->pnext, i++)
+    farr[i] = f;
+  printf("%d %d\n", i, fault_num);
+  for (i = 0; i < fault_num; i++) {
+    j = rand() % (i+1);
+    f = farr[i];
+    farr[i] = farr[j];
+    farr[j] = f;
+  }
+  first_fault = NIL(struct FAULT);
+  for (i = 0; i < fault_num; i++) {
+    farr[i]->pnext = first_fault;
+    farr[i]->pnext_undetect = first_fault;
+    first_fault = farr[i];
+  }
+  free(farr);
 
   num_of_gate_fault = num_of_tdf_fault;
   printf("#num of gate fault: %d\n", num_of_gate_fault);
