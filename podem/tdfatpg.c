@@ -9,8 +9,6 @@
 #define B  4 // D_bar
 #define CONFLICT 2
 
-#define addition_detect 0
-
 extern int time_limit;
 extern int backtrack_limit;     // maximum number of backtracked allowed, defatult is 50
 extern int detect_num;          // number of patterns per fault, default is 1
@@ -98,7 +96,7 @@ tdf_atpg() {
     int no_of_calls = 0;
     clock_t st_time = clock();
     /* generated test vectors */
-    char **vectors = (char**)malloc((detect_num + addition_detect) * sizeof(char*));
+    char **vectors = (char**)malloc(detect_num * sizeof(char*));
     int no_of_vectors;
     /* initialize all_vectors */
     all_vectors = (char**)malloc(1000 * sizeof(char*));
@@ -119,7 +117,7 @@ tdf_atpg() {
           printf("%s s-a-%d %s\n", f->node->name, f->fault_type, f->io?"output":"input");
         }
         */
-        switch (tdf_podem(fault_under_test, &current_backtracks, vectors, &no_of_vectors)) {
+        switch (tdf_podem(fault_under_test, &current_backtracks, vectors, &no_of_vectors, TRUE)) {
 	    case MAYBE:
                 no_of_aborted_faults++;
                 break;
@@ -176,11 +174,12 @@ tdf_atpg() {
 }
 
 /* generates patterns for a single fault */
-int tdf_podem(fault, current_backtracks, vectors, no_of_vectors)
+int tdf_podem(fault, current_backtracks, vectors, no_of_vectors, reset)
 fptr fault;
 int *current_backtracks;
 char **vectors;
 int *no_of_vectors;
+int reset;
 {
     register int i,j;
     register nptr n;
@@ -196,11 +195,13 @@ int *no_of_vectors;
     int nstack = 0;
     
     /* initialize all circuit wires to unknown */
-    for (i = 0; i < ncktwire; i++) {
-        sort_wlist[i]->value = U;
-        sort_wlist[i]->value2 = U;
-        sort_wlist[i]->flag |= CHANGED;
-        sort_wlist[i]->flag2 |= CHANGED;
+    if (reset) {
+        for (i = 0; i < ncktwire; i++) {
+            sort_wlist[i]->value = U;
+            sort_wlist[i]->value2 = U;
+            sort_wlist[i]->flag |= CHANGED;
+            sort_wlist[i]->flag2 |= CHANGED;
+        }
     }
     no_of_backtracks = 0;
     *no_of_vectors = 0;
@@ -222,8 +223,6 @@ int *no_of_vectors;
           // if fault effect reaches PO, done. Fig 7.10
 	  if (tdf_check_test(fault)){
             find_test = TRUE;
-            tdf_fill_pattern(vectors, no_of_vectors, fault->detect_num + addition_detect);
-            assert(*no_of_vectors == fault->detect_num + addition_detect);
             return TRUE;
           }
 	  break;
@@ -240,8 +239,7 @@ int *no_of_vectors;
      * 2. no_test
             printf("OK\n");
      * 3. already find a test pattern AND no_of_patterns meets required detect_num */
-    while ((no_of_backtracks < backtrack_limit) && !no_test &&
-        !(find_test && (*no_of_vectors == fault->detect_num + addition_detect))) {
+    while ((no_of_backtracks < backtrack_limit) && !no_test && !find_test) {
         /* check if test possible.   Fig. 7.1 */
         if (wpi = tdf_test_possible(fault)) {
 	    /* insert a new PI into decision_tree */
@@ -310,8 +308,6 @@ int *no_of_vectors;
             if (wfault = tdf_fault_evaluate(fault)) tdf_forward_imply(wfault);
             if (tdf_check_test(fault)) {
                 find_test = TRUE;
-                tdf_fill_pattern(vectors, no_of_vectors, fault->detect_num + addition_detect);
-                assert(*no_of_vectors == fault->detect_num + addition_detect);
             }  // if check_test()
         } // again
     } // while (three conditions)
@@ -321,6 +317,8 @@ int *no_of_vectors;
     tdf_unmark_propagate_tree(fault->node);
     
     if (find_test) {
+        tdf_fill_pattern(vectors, no_of_vectors, fault->detect_num);
+        assert(*no_of_vectors == fault->detect_num);
         return TRUE;
     }
     else if (no_test) {
@@ -1019,71 +1017,6 @@ int no_of_detects;
 {
   int i, j;
   char *pattern;
-  /*
-  int c = rand() & 1;
-  for (i = 0; i <= ncktin; i++) {
-    if (i == ncktin) {
-      if (cktin[0]->value2 == U) {
-        if (*no_of_detects < detect_num + addition_detect) {
-          cktin[0]->value2 = c;
-          tdf_fill_pattern(vectors, no_of_vectors, no_of_detects);
-        }
-        if (*no_of_detects < detect_num + addition_detect) {
-          cktin[0]->value2 = (c ^ 1);
-          tdf_fill_pattern(vectors, no_of_vectors, no_of_detects);
-        }
-        cktin[0]->value2 = U;
-        break;
-      }
-    }
-    else {
-      if (cktin[i]->value == U) {
-        if (*no_of_detects < detect_num + addition_detect) {
-          cktin[i]->value = c;
-          tdf_fill_pattern(vectors, no_of_vectors, no_of_detects);
-        }
-        if (*no_of_detects < detect_num + addition_detect) {
-          cktin[i]->value = (c ^ 1);
-          tdf_fill_pattern(vectors, no_of_vectors, no_of_detects);
-        }
-        cktin[i]->value = U;
-        break;
-      }
-    }
-  }
-  if (i == ncktin + 1) {
-    *no_of_detects += 1;
-    pattern = (char*)malloc(ncktin + 1);
-    for (j = 0; j < ncktin; j++) {
-      switch (cktin[j]->value) {
-        case 0:
-        case B: pattern[j] = '0'; break;
-        case 1:
-        case D: pattern[j] = '1'; break;
-        default: printf("something is wrong in tdf_fill_pattern.\n");
-      }
-    }
-    switch (cktin[0]->value2) {
-      case 0:
-      case B: pattern[ncktin] = '0'; break;
-      case 1:
-      case D: pattern[ncktin] = '1'; break;
-      default: printf("something is wrong in tdf_fill_pattern.\n");
-    }
-    for (j = 0; j < no_of_all_vectors; j++) {
-      if (my_strncmp(pattern, all_vectors[j], ncktin + 1) == 0) {
-        break;
-      }
-    }
-    if (j == no_of_all_vectors || *no_of_vectors == 0) {
-      vectors[*no_of_vectors] = pattern;
-      *no_of_vectors += 1;
-    }
-    else {
-      free(pattern);
-    }
-  }
-  */
   while (*no_of_vectors < no_of_detects) {
     pattern = (char*)malloc(ncktin + 1);
     for (j = 0; j < ncktin; j++) {
