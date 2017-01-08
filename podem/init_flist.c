@@ -172,7 +172,8 @@ generate_tdf_fault_list()
   num_of_tdf_fault = 0; // totle number of faults in the whole circuit
 
   /* walk through every wire in the circuit*/
-  for (i = ncktwire - 1; i >= 0; i--) {
+  /* for (i = ncktwire - 1; i >= 0; i--) { */
+  for (i = 0; i < ncktwire; i++) {
     w = sort_wlist[i]; // each wire w
     n = w->inode[0]; // w is the gate n output wire
 
@@ -288,6 +289,7 @@ generate_tdf_fault_list()
   }
 
   /* random shuffle */
+  /*
   fptr *farr = malloc(fault_num * sizeof(fptr));
   for (f = first_fault, i = 0; f; f = f->pnext, i++)
     farr[i] = f;
@@ -305,6 +307,7 @@ generate_tdf_fault_list()
     first_fault = farr[i];
   }
   free(farr);
+  */
 
   num_of_gate_fault = num_of_tdf_fault;
   printf("#num of gate fault: %d\n", num_of_gate_fault);

@@ -206,7 +206,7 @@ int reset;
         *current_backtracks = 0;
     }
     if (fault->detect_num > no_of_detect)
-      no_of_detect = fault->detect_num;
+        no_of_detect = fault->detect_num;
     *no_of_vectors = 0;
     find_test = FALSE;
     no_test = FALSE;
@@ -314,9 +314,6 @@ int reset;
         } // again
     } // while (three conditions)
 
-    free(stack);
-    tdf_unmark_propagate_tree(fault->node);
-    
     if (find_test) {
         next_fault = fault->pnext_undetect;
         if (next_fault) {
@@ -324,6 +321,31 @@ int reset;
         }
         tdf_fill_pattern(vectors, no_of_vectors, no_of_detect);
         assert(*no_of_vectors >= no_of_detect);
+    }
+    /* undo decision */
+    for (i = 0; i < nstack; i++) {
+        pstack = stack + i;
+        if (pstack->frame == 1) {
+            pstack->wire->value = U;
+            pstack->wire->flag |= CHANGED;
+            if (wtemp = get_next_wire(pstack->wire)) {
+              wtemp->value2 = U;
+              wtemp->flag2 |= CHANGED;
+            }
+        }
+        else {
+            pstack->wire->value2 = U;
+            pstack->wire->flag2 |= CHANGED;
+            if (wtemp = get_prev_wire(pstack->wire)) {
+              wtemp->value = U;
+              wtemp->flag |= CHANGED;
+            }
+        }
+    }
+    free(stack);
+    tdf_unmark_propagate_tree(fault->node);
+    
+    if (find_test) {
         return TRUE;
     }
     else if (no_test) {
