@@ -46,7 +46,7 @@ test()
     }
     if(tdfatpg_only)
     {
-        backtrack_limit = 2 * (int)sqrt(ncktwire) + ncktin / 10 + 70;
+        backtrack_limit = (int)sqrt(ncktwire) + ncktin / 10 + 70;
         /* backtrack_limit = 300; */
         fprintf(stderr, "limit = %d\n", backtrack_limit);
         tdf_atpg();

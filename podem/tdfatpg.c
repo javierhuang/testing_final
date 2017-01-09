@@ -153,7 +153,8 @@ tdf_atpg() {
         total_no_of_backtracks += current_backtracks; // accumulate number of backtracks
         no_of_calls++;
     }
-    if(compress) {
+    fprintf(stderr, "number of abort: %d\n", no_of_aborted_faults);
+    if (compress) {
         flist = generate_detected_fault_list();
         tdf_reverse_compression(flist);
         random_switch_pattern();
@@ -313,12 +314,15 @@ int reset;
             }  // if check_test()
         } // again
     } // while (three conditions)
+    tdf_unmark_propagate_tree(fault->node);
 
     if (find_test) {
-        next_fault = fault->pnext_undetect;
-        if (next_fault) {
-          tdf_podem(next_fault, no_of_detect, current_backtracks, vectors, no_of_vectors, FALSE);
-        }
+        if (compress) {
+            next_fault = fault->pnext_undetect;
+            if (next_fault) {
+                tdf_podem(next_fault, no_of_detect, current_backtracks, vectors, no_of_vectors, FALSE);
+            }
+        } 
         tdf_fill_pattern(vectors, no_of_vectors, no_of_detect);
         assert(*no_of_vectors >= no_of_detect);
     }
@@ -343,7 +347,6 @@ int reset;
         }
     }
     free(stack);
-    tdf_unmark_propagate_tree(fault->node);
     
     if (find_test) {
         return TRUE;
